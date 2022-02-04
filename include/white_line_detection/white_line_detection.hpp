@@ -15,7 +15,6 @@
 #include <cv_bridge/rgb_colors.h>
 #include <image_transport/image_transport.hpp>
 
-
 namespace WhiteLineDetection
 {
     class WhiteLineDetection : public rclcpp::Node
@@ -25,52 +24,71 @@ namespace WhiteLineDetection
         void setupOCL();
         void setupWarp();
         void createGUI();
-    private:
-        //Define variables
-        bool connected{false};
-        int HEIGHT{}, WIDTH{};
-        int upperColor{255}; 
-        int highB, highG, highR;
-        int lowB, lowG, lowR;
-        cv::UMat Utransmtx;
-        cv::Rect ROI;
-        cv::Mat erosionKernel;
 
-        //Ros Params
-        double A, B, C, D;
-        double ratio;
-        float tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
-        int lowColor, kernelSize, nthPixel;
+        /// Enable the openCv visualization if set by the node param.
         bool enableImShow;
 
-        //Define raw image callback and camera info callback
+    private:
+        // Define variables
+
+        /// True when connected to the camera.
+        bool connected{false};
+
+        /// Camera resolution as retrived from the camera_info topic.
+        int HEIGHT{}, WIDTH{};
+
+        /// The lower and upper bound for what we define 'white' as.
+        int upperColor{255};
+        int lowColor;
+        int highB, highG, highR;
+        int lowB, lowG, lowR;
+
+        /// The 3x3 perspective transform matrix. Should be treated as constant.
+        cv::UMat Utransmtx;
+        /// The region of intrest.
+        cv::Rect ROI;
+        /// Kernal used for white pixel filtering.
+        cv::Mat erosionKernel;
+
+        // Ros Params
+
+        /// Calibration constants. These are used for finding the offsets of the white pixels from the robot body.
+        double A, B, C, D;
+        /// width / height of the actual panel on the ground.
+        double ratio;
+        /// Warp pixel locations that do something
+        float tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
+
+        /// The size of the erosion kernel.
+        int kernelSize;
+        /// The nth pixel to sample from the white pixels. Prevents spam to PCL2.
+        int nthPixel;
+
+        // Define raw image callback and camera info callback
         void raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg);
         void cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
-        //Define other image pipeline functions
+        // Define other image pipeline functions
         void getPixelPointCloud(cv::UMat &erodedImage) const;
-        void display(cv::UMat &Uinput, cv::UMat &Utransformed, cv::UMat &Uerosion);
-        cv::UMat imageFiltering(cv::UMat &warpedImage);
-        cv::UMat shiftPerspective(cv::UMat &inputImage);
-        cv::UMat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg);
+        void display(cv::UMat &Uinput, cv::UMat &Utransformed, cv::UMat &Uerosion) const;
+        cv::UMat imageFiltering(cv::UMat &warpedImage) const;
+        cv::UMat shiftPerspective(cv::UMat &inputImage) const;
+        cv::UMat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const;
 
-        //empty callback functions but it is the only way to increment the sliders
-        static void lowBlueTrackbar(int, void *){}
-        static void highBlueTrackbar(int, void *){}
-        static void lowGreenTrackbar(int, void *){}
-        static void highGreenTrackbar(int, void *){}
-        static void lowRedTrackbar(int, void *){}
-        static void highRedTrackbar(int, void *){}
+        // empty callback functions but it is the only way to increment the sliders
+        static void lowBlueTrackbar(int, void *) {}
+        static void highBlueTrackbar(int, void *) {}
+        static void lowGreenTrackbar(int, void *) {}
+        static void highGreenTrackbar(int, void *) {}
+        static void lowRedTrackbar(int, void *) {}
+        static void highRedTrackbar(int, void *) {}
 
-
-        
-        //Define subscriptions
+        // Define subscriptions
         rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr raw_img_subscription_;
         rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr cam_info_subscription_;
-        
-        //Define publishers
+
+        // Define publishers
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr camera_cloud_publisher_;
-        
     };
 }
 
