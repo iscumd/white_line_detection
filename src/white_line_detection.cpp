@@ -138,7 +138,7 @@ namespace WhiteLineDetection
 	void WhiteLineDetection::getPixelPointCloud(cv::UMat &erodedImage) const
 	{
 		sensor_msgs::msg::PointCloud msg;
-		sensor_msgs::msg::PointCloud2 msg2;
+  sensor_msgs::msg::PointCloud2::SharedPtr msg2(new sensor_msgs::msg::PointCloud2);
 		std::vector<cv::Point> pixelCoordinates;
 
 		cv::findNonZero(erodedImage, pixelCoordinates);
@@ -154,11 +154,12 @@ namespace WhiteLineDetection
 				msg.points.push_back(pixelLoc);
 			}
 		}
-
-		sensor_msgs::convertPointCloudToPointCloud2(msg, msg2);
+		sensor_msgs::convertPointCloudToPointCloud2(msg, *msg2);
+		
+		msg2->header.frame_id = "camera_link";
 
 		//pixelPub.publish(msg); //For debugging?
-		camera_cloud_publisher_->publish(msg2);
+		camera_cloud_publisher_->publish(*msg2);
 	}
 
 	void WhiteLineDetection::createGUI()
