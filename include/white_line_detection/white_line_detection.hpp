@@ -39,7 +39,7 @@ namespace WhiteLineDetection
         //Ros Params
         double A, B, C, D;
         double ratio;
-        int tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
+        float tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
         int lowColor, kernelSize, nthPixel;
         bool enableImShow;
 

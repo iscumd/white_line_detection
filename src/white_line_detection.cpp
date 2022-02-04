@@ -40,14 +40,14 @@ namespace WhiteLineDetection
         B = this->declare_parameter("calibration_constants_B", 0.0);
         C = this->declare_parameter("calibration_constants_C", 0.0);
         D = this->declare_parameter("calibration_constants_D", 0.0);
-        tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0);
-        tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0);
-        tr_x = this->declare_parameter("pixel_coordinates_tr_x", 0);
-        tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0);
-        bl_x = this->declare_parameter("pixel_coordinates_bl_x", 0);
-        bl_y = this->declare_parameter("pixel_coordinates_bl_y", 0);
-        br_x = this->declare_parameter("pixel_coordinates_br_x", 0);
-        br_y = this->declare_parameter("pixel_coordinates_br_y", 0);
+        tl_x = this->declare_parameter("pixel_coordinates_tl_x", 112.0);
+        tl_y = this->declare_parameter("pixel_coordinates_tl_y", 12.0);
+        tr_x = this->declare_parameter("pixel_coordinates_tr_x", 1558.0);
+        tr_y = this->declare_parameter("pixel_coordinates_tr_y", 12.0);
+        bl_x = this->declare_parameter("pixel_coordinates_bl_x", 112.0);
+        bl_y = this->declare_parameter("pixel_coordinates_bl_y", 1558.0);
+        br_x = this->declare_parameter("pixel_coordinates_br_x", 1558.0);
+        br_y = this->declare_parameter("pixel_coordinates_br_y", 908.0);
         ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0); // width / height of the actual panel on the ground
         lowColor = this->declare_parameter("lower_bound_white", 160); 
         kernelSize = this->declare_parameter("kernel_size", 5);
@@ -122,8 +122,8 @@ namespace WhiteLineDetection
 		cv::Point R3 = cv::Point2f(cv::Point2f(R.x + R.width, R.y + R.height));
 		cv::Point R4 = cv::Point2f(cv::Point2f(R.x, R.y + R.height));
 
-		std::vector<cv::Point2d> squarePts{R1, R2, R3, R4};
-		std::vector<cv::Point2d> quadPts{Q1, Q2, Q3, Q4};
+		std::vector<cv::Point2f> squarePts{R1, R2, R3, R4};
+		std::vector<cv::Point2f> quadPts{Q1, Q2, Q3, Q4};
 
 		//Copy transform to constant feild
 		auto transmtx = cv::getPerspectiveTransform(quadPts, squarePts);
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
     auto white_line_detection = std::make_shared<WhiteLineDetection::WhiteLineDetection>(options);
     exec.add_node(white_line_detection);
     white_line_detection->setupOCL();
-    white_line_detection->createGUI();
+    //white_line_detection->createGUI();
     white_line_detection->setupWarp();
     exec.spin();
     rclcpp::shutdown();
