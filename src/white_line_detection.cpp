@@ -34,20 +34,21 @@ namespace WhiteLineDetection
 			"/camera/camera_points", rclcpp::SensorDataQoS());
 
 		// Define Parameters
-		A = this->declare_parameter("calibration_constants_A", 0.0);
-		B = this->declare_parameter("calibration_constants_B", 0.0);
-		C = this->declare_parameter("calibration_constants_C", 0.0);
-		D = this->declare_parameter("calibration_constants_D", 0.0);
+		A = this->declare_parameter("calibration_constants_A", 1.0);
+		B = this->declare_parameter("calibration_constants_B", 1.0);
+		C = this->declare_parameter("calibration_constants_C", 1.0);
+		D = this->declare_parameter("calibration_constants_D", 1.0);
 
 		// Warp params
-		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 112.0);
-		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 12.0);
-		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 1558.0);
-		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 12.0);
-		bl_x = this->declare_parameter("pixel_coordinates_bl_x", 112.0);
-		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 1558.0);
-		br_x = this->declare_parameter("pixel_coordinates_br_x", 1558.0);
-		br_y = this->declare_parameter("pixel_coordinates_br_y", 908.0);
+		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0.0);
+		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0.0);
+		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 320.0);
+		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0.0);
+		bl_x = this->declare_parameter("pixel_coordinates_bl_x", 0.0);
+		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 240.0);
+		br_x = this->declare_parameter("pixel_coordinates_br_x", 320.0);
+		br_y = this->declare_parameter("pixel_coordinates_br_y", 240.0);
+      
 		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
 
 		lowColor = this->declare_parameter("lower_bound_white", 160);
@@ -55,12 +56,13 @@ namespace WhiteLineDetection
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
 		enableImShow = this->declare_parameter("enable_imshow", false);
 
-		// Define CV variables
-		erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
-		ROI = cv::Rect(112, 12, 1670 - 112, 920 - 12);
-	}
+    //Define CV variables
+    erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
+    ROI = cv::Rect(12, 12, 320-20, 240-20);
+    }
 
-	/// Sets up the GPU to run our code using OpenCl.
+	///Sets up the GPU to run our code using OpenCl.
+
 	void WhiteLineDetection::setupOCL()
 	{
 		cv::setUseOptimized(true);
@@ -135,7 +137,7 @@ namespace WhiteLineDetection
 	void WhiteLineDetection::getPixelPointCloud(cv::UMat &erodedImage) const
 	{
 		sensor_msgs::msg::PointCloud msg;
-		sensor_msgs::msg::PointCloud2 msg2;
+  sensor_msgs::msg::PointCloud2::SharedPtr msg2(new sensor_msgs::msg::PointCloud2);
 		std::vector<cv::Point> pixelCoordinates;
 
 		cv::findNonZero(erodedImage, pixelCoordinates);
@@ -151,10 +153,10 @@ namespace WhiteLineDetection
 				msg.points.push_back(pixelLoc);
 			}
 		}
-
-		sensor_msgs::convertPointCloudToPointCloud2(msg, msg2);
-
-		camera_cloud_publisher_->publish(msg2);
+		sensor_msgs::convertPointCloudToPointCloud2(msg, *msg2);
+		
+		msg2->header.frame_id = "camera_link"; //Fix for gazebo
+		camera_cloud_publisher_->publish(*msg2);
 	}
 
 	void WhiteLineDetection::createGUI()
@@ -185,8 +187,8 @@ namespace WhiteLineDetection
 	/// Returns the cv matrix form of the image.
 	cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const
 	{
-		auto cvImage = cv_bridge::toCvCopy(imageMsg, "CV_8UC3"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
-		return cvImage->image.getUMat(cv::ACCESS_RW);			 // TODO make sure this access is correct.
+		auto cvImage = cv_bridge::toCvCopy(imageMsg, "mono8"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
+		return cvImage->image.getUMat(cv::ACCESS_RW);			 //TODO make sure this access is correct.
 	}
 
 	/// Applies the perspective warp to the image.
@@ -196,13 +198,12 @@ namespace WhiteLineDetection
 	{
 		// The transformed image
 		auto transformed = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
-		// Apply the perspective warp previously calibrated.
 		cv::warpPerspective(inputImage, transformed, Utransmtx, transformed.size());
 
 		return transformed(ROI);
 	}
 
-	/// Filters non-white pixels out of the warped image.
+  /// Filters non-white pixels out of the warped image.
 	///
 	/// Returns the eroded image matrix. The only pixels left should be white.
 	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage) const
