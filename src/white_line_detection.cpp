@@ -58,7 +58,7 @@ namespace WhiteLineDetection
 
     //Define CV variables
     erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
-    ROI = cv::Rect(12, 12, 320-20, 240-20);
+    
     }
 
 	///Sets up the GPU to run our code using OpenCl.
@@ -249,6 +249,7 @@ namespace WhiteLineDetection
 		{
 			HEIGHT = msg->height;
 			WIDTH = msg->width;
+			ROI = cv::Rect(12, 12, WIDTH-20, HEIGHT-20);
 			RCLCPP_INFO(this->get_logger(),"Connected to camera");
 			connected = true;
 		}
