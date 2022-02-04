@@ -203,7 +203,7 @@ namespace WhiteLineDetection
 		//The transformed image
 		auto transformed = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
 		//Apply the perspective warp previously calibrated.
-		cv::warpPerspective(inputImage, transformed, Utransmtx, transformed.size());
+		cv::warpPerspective(inputImage, transformed, Utransmtx, transformed.size()); // failing here
 
 		return transformed(ROI);
 	}
@@ -228,7 +228,7 @@ namespace WhiteLineDetection
     void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg){
         if (!connected)
 		{
-			//RCLCPP_ERROR("Received image without receiving camera info first. This should not occur, and is a logic error.");
+			 RCLCPP_ERROR(this->get_logger(), "Received image without receiving camera info first. This should not occur, and is a logic error.");
 		}
 		else
 		{
@@ -236,7 +236,6 @@ namespace WhiteLineDetection
 			auto cvImg = ptgrey2CVMat(msg);
 			//Perspective warp
 			auto warpedImg = shiftPerspective(cvImg);
-			std::cout << "here" << std::endl;
 			//Filter non-white pixels out
 			auto filteredImg = imageFiltering(warpedImg);
 			//Convert pixels to pointcloud and publish
