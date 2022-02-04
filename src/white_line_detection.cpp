@@ -38,6 +38,8 @@ namespace WhiteLineDetection
 		B = this->declare_parameter("calibration_constants_B", 0.0);
 		C = this->declare_parameter("calibration_constants_C", 0.0);
 		D = this->declare_parameter("calibration_constants_D", 0.0);
+
+		// Warp params
 		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 112.0);
 		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 12.0);
 		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 1558.0);
@@ -46,7 +48,8 @@ namespace WhiteLineDetection
 		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 1558.0);
 		br_x = this->declare_parameter("pixel_coordinates_br_x", 1558.0);
 		br_y = this->declare_parameter("pixel_coordinates_br_y", 908.0);
-		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0); // width / height of the actual panel on the ground
+		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
+
 		lowColor = this->declare_parameter("lower_bound_white", 160);
 		kernelSize = this->declare_parameter("kernel_size", 5);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
@@ -106,6 +109,7 @@ namespace WhiteLineDetection
 		cv::Point Q3 = cv::Point2f(br_x, br_y); // bottom right
 		cv::Point Q4 = cv::Point2f(bl_x, bl_y); // bottom left
 
+		// The dimensions of Ohms board(?)
 		double boardH = sqrt((Q3.x - Q2.x) * (Q3.x - Q2.x) + (Q3.y - Q2.y) * (Q3.y - Q2.y));
 		double boardW = ratio * boardH;
 
@@ -150,7 +154,6 @@ namespace WhiteLineDetection
 
 		sensor_msgs::convertPointCloudToPointCloud2(msg, msg2);
 
-		// pixelPub.publish(msg); //For debugging?
 		camera_cloud_publisher_->publish(msg2);
 	}
 
@@ -170,7 +173,7 @@ namespace WhiteLineDetection
 	}
 
 	/// Updates the displayed guis with the last processed image.
-	void WhiteLineDetection::display(cv::UMat &Uinput, cv::UMat &Utransformed, cv::UMat &Uerosion)
+	void WhiteLineDetection::display(cv::UMat &Uinput, cv::UMat &Utransformed, cv::UMat &Uerosion) const
 	{
 		cv::imshow("original", Uinput);
 		cv::imshow("warp", Utransformed);
@@ -180,7 +183,7 @@ namespace WhiteLineDetection
 	/// Converts a raw image to an openCv matrix. This function should decode the image properly automatically.
 	///
 	/// Returns the cv matrix form of the image.
-	cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg)
+	cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const
 	{
 		auto cvImage = cv_bridge::toCvCopy(imageMsg, "CV_8UC3"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
 		return cvImage->image.getUMat(cv::ACCESS_RW);			 // TODO make sure this access is correct.
@@ -189,7 +192,7 @@ namespace WhiteLineDetection
 	/// Applies the perspective warp to the image.
 	///
 	/// Returns the warped image matrix.
-	cv::UMat WhiteLineDetection::shiftPerspective(cv::UMat &inputImage)
+	cv::UMat WhiteLineDetection::shiftPerspective(cv::UMat &inputImage) const
 	{
 		// The transformed image
 		auto transformed = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
@@ -202,7 +205,7 @@ namespace WhiteLineDetection
 	/// Filters non-white pixels out of the warped image.
 	///
 	/// Returns the eroded image matrix. The only pixels left should be white.
-	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage)
+	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage) const
 	{
 		auto binaryImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
 		auto erodedImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
@@ -213,7 +216,8 @@ namespace WhiteLineDetection
 		return erodedImage;
 	}
 
-	// Define callbacks
+	/// Callback passed to the image topic subscription. This produces a pointcloud for every
+	/// image sent on the topic. 
 	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
 	{
 		if (!connected)
@@ -237,6 +241,7 @@ namespace WhiteLineDetection
 		}
 	}
 
+	/// Callback passed to the camera info sub.
 	void WhiteLineDetection::cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg)
 	{
 		if (!connected) // attempt to prevent this callback from spamming.
@@ -249,6 +254,7 @@ namespace WhiteLineDetection
 	}
 
 }
+
 int main(int argc, char *argv[])
 {
 	rclcpp::init(argc, argv);
@@ -256,8 +262,14 @@ int main(int argc, char *argv[])
 	rclcpp::NodeOptions options;
 	auto white_line_detection = std::make_shared<WhiteLineDetection::WhiteLineDetection>(options);
 	exec.add_node(white_line_detection);
+
 	white_line_detection->setupOCL();
-	// white_line_detection->createGUI();
+
+	// Only enable gui if set as it crashes otherwise
+	if (white_line_detection->enableImShow) {
+		white_line_detection->createGUI();
+	}
+
 	white_line_detection->setupWarp();
 	exec.spin();
 	rclcpp::shutdown();
