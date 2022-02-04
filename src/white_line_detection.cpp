@@ -16,53 +16,48 @@
 #include "cv_bridge/cv_bridge.h"
 #include <cv_bridge/rgb_colors.h>
 
-
-
 namespace WhiteLineDetection
 {
-    WhiteLineDetection::WhiteLineDetection(rclcpp::NodeOptions options)
-        : Node("white_line_detection", options)
-    {
-        //Define topic subscriptions and publishers
-        raw_img_subscription_ = this->create_subscription<sensor_msgs::msg::Image>( //TODO: MAKE THIS TOPIC PATH A PARAMETER
-        "/kohm/unfiltered_image", 10,
-        std::bind(&WhiteLineDetection::raw_img_callback, this, std::placeholders::_1));
-        
-        cam_info_subscription_ = this->create_subscription<sensor_msgs::msg::CameraInfo>( //TODO: MAKE THIS TOPIC PATH A PARAMETER
-        "/kohm/camera_info", 10,
-        std::bind(&WhiteLineDetection::cam_info_callback, this, std::placeholders::_1));
-        
-        camera_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(//TODO: MAYBE MAKE THIS TOPIC PATH A PARAMETER
-        "/camera/camera_points", rclcpp::SensorDataQoS());
+	WhiteLineDetection::WhiteLineDetection(rclcpp::NodeOptions options)
+		: Node("white_line_detection", options)
+	{
+		// Define topic subscriptions and publishers
+		raw_img_subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
+			"/camera/image_raw", 10,
+			std::bind(&WhiteLineDetection::raw_img_callback, this, std::placeholders::_1));
 
-        //Define Parameters
-        A = this->declare_parameter("calibration_constants_A", 0.0);
-        B = this->declare_parameter("calibration_constants_B", 0.0);
-        C = this->declare_parameter("calibration_constants_C", 0.0);
-        D = this->declare_parameter("calibration_constants_D", 0.0);
-        tl_x = this->declare_parameter("pixel_coordinates_tl_x", 112.0);
-        tl_y = this->declare_parameter("pixel_coordinates_tl_y", 12.0);
-        tr_x = this->declare_parameter("pixel_coordinates_tr_x", 1558.0);
-        tr_y = this->declare_parameter("pixel_coordinates_tr_y", 12.0);
-        bl_x = this->declare_parameter("pixel_coordinates_bl_x", 112.0);
-        bl_y = this->declare_parameter("pixel_coordinates_bl_y", 1558.0);
-        br_x = this->declare_parameter("pixel_coordinates_br_x", 1558.0);
-        br_y = this->declare_parameter("pixel_coordinates_br_y", 908.0);
-        ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0); // width / height of the actual panel on the ground
-        lowColor = this->declare_parameter("lower_bound_white", 160); 
-        kernelSize = this->declare_parameter("kernel_size", 5);
-        nthPixel = this->declare_parameter("sample_nth_pixel", 5);
-        enableImShow = this->declare_parameter("enable_imshow", false);
+		cam_info_subscription_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
+			"/camera/camera_info", 10,
+			std::bind(&WhiteLineDetection::cam_info_callback, this, std::placeholders::_1));
 
+		camera_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+			"/camera/camera_points", rclcpp::SensorDataQoS());
 
-        
+		// Define Parameters
+		A = this->declare_parameter("calibration_constants_A", 0.0);
+		B = this->declare_parameter("calibration_constants_B", 0.0);
+		C = this->declare_parameter("calibration_constants_C", 0.0);
+		D = this->declare_parameter("calibration_constants_D", 0.0);
+		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 112.0);
+		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 12.0);
+		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 1558.0);
+		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 12.0);
+		bl_x = this->declare_parameter("pixel_coordinates_bl_x", 112.0);
+		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 1558.0);
+		br_x = this->declare_parameter("pixel_coordinates_br_x", 1558.0);
+		br_y = this->declare_parameter("pixel_coordinates_br_y", 908.0);
+		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0); // width / height of the actual panel on the ground
+		lowColor = this->declare_parameter("lower_bound_white", 160);
+		kernelSize = this->declare_parameter("kernel_size", 5);
+		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
+		enableImShow = this->declare_parameter("enable_imshow", false);
 
-        //Define CV variables
-        erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
-        ROI = cv::Rect(112, 12, 1670 - 112, 920 - 12);
-    }
+		// Define CV variables
+		erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
+		ROI = cv::Rect(112, 12, 1670 - 112, 920 - 12);
+	}
 
-	///Sets up the GPU to run our code using OpenCl.
+	/// Sets up the GPU to run our code using OpenCl.
 	void WhiteLineDetection::setupOCL()
 	{
 		cv::setUseOptimized(true);
@@ -103,14 +98,13 @@ namespace WhiteLineDetection
 		std::cout << d.OpenCLVersion() << std::endl;
 	}
 
-
 	/// Sets up the constant perspective transform matrix as defined by node params.
 	void WhiteLineDetection::setupWarp()
 	{
-    	cv::Point Q1 = cv::Point2f(tl_x, tl_y); //top left pixel coordinate
-		cv::Point Q2 = cv::Point2f(tr_x, tr_y); //top right
-		cv::Point Q3 = cv::Point2f(br_x, br_y); //bottom right
-		cv::Point Q4 = cv::Point2f(bl_x, bl_y); //bottom left
+		cv::Point Q1 = cv::Point2f(tl_x, tl_y); // top left pixel coordinate
+		cv::Point Q2 = cv::Point2f(tr_x, tr_y); // top right
+		cv::Point Q3 = cv::Point2f(br_x, br_y); // bottom right
+		cv::Point Q4 = cv::Point2f(bl_x, bl_y); // bottom left
 
 		double boardH = sqrt((Q3.x - Q2.x) * (Q3.x - Q2.x) + (Q3.y - Q2.y) * (Q3.y - Q2.y));
 		double boardW = ratio * boardH;
@@ -125,11 +119,10 @@ namespace WhiteLineDetection
 		std::vector<cv::Point2f> squarePts{R1, R2, R3, R4};
 		std::vector<cv::Point2f> quadPts{Q1, Q2, Q3, Q4};
 
-		//Copy transform to constant feild
+		// Copy transform to constant feild
 		auto transmtx = cv::getPerspectiveTransform(quadPts, squarePts);
 		transmtx.copyTo(Utransmtx);
 	}
-
 
 	/// Converts the white pixel matrix into a pointcloud, then publishes the pointclouds.
 	///
@@ -142,13 +135,13 @@ namespace WhiteLineDetection
 		std::vector<cv::Point> pixelCoordinates;
 
 		cv::findNonZero(erodedImage, pixelCoordinates);
-		//Iter through all the white pixels, adding their locations to pointclouds.
-		for (size_t i = 0; i < pixelCoordinates.size(); i++) //TODO: Reconfigure this so that it works with PCL2 so we can stop using PCL
+		// Iter through all the white pixels, adding their locations to pointclouds.
+		for (size_t i = 0; i < pixelCoordinates.size(); i++) // TODO: Reconfigure this so that it works with PCL2 so we can stop using PCL
 		{
 			if (i % nthPixel == 0)
 			{
 				geometry_msgs::msg::Point32 pixelLoc;
-				//XY distances of each white pixel relative to robot
+				// XY distances of each white pixel relative to robot
 				pixelLoc.x = (A * pixelCoordinates[i].x) + B;
 				pixelLoc.y = (C * pixelCoordinates[i].y) + D;
 				msg.points.push_back(pixelLoc);
@@ -157,7 +150,7 @@ namespace WhiteLineDetection
 
 		sensor_msgs::convertPointCloudToPointCloud2(msg, msg2);
 
-		//pixelPub.publish(msg); //For debugging?
+		// pixelPub.publish(msg); //For debugging?
 		camera_cloud_publisher_->publish(msg2);
 	}
 
@@ -176,7 +169,6 @@ namespace WhiteLineDetection
 		cv::createTrackbar("High Red", "TRACKBARS", &highR, upperColor, highRedTrackbar);
 	}
 
-
 	/// Updates the displayed guis with the last processed image.
 	void WhiteLineDetection::display(cv::UMat &Uinput, cv::UMat &Utransformed, cv::UMat &Uerosion)
 	{
@@ -188,28 +180,26 @@ namespace WhiteLineDetection
 	/// Converts a raw image to an openCv matrix. This function should decode the image properly automatically.
 	///
 	/// Returns the cv matrix form of the image.
-    cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg)
+	cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg)
 	{
 		auto cvImage = cv_bridge::toCvCopy(imageMsg, "CV_8UC3"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
-		return cvImage->image.getUMat(cv::ACCESS_RW);			 //TODO make sure this access is correct.
+		return cvImage->image.getUMat(cv::ACCESS_RW);			 // TODO make sure this access is correct.
 	}
-
 
 	/// Applies the perspective warp to the image.
 	///
 	/// Returns the warped image matrix.
 	cv::UMat WhiteLineDetection::shiftPerspective(cv::UMat &inputImage)
 	{
-		//The transformed image
+		// The transformed image
 		auto transformed = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
-		//Apply the perspective warp previously calibrated.
+		// Apply the perspective warp previously calibrated.
 		cv::warpPerspective(inputImage, transformed, Utransmtx, transformed.size());
 
 		return transformed(ROI);
 	}
 
-
-    /// Filters non-white pixels out of the warped image.
+	/// Filters non-white pixels out of the warped image.
 	///
 	/// Returns the eroded image matrix. The only pixels left should be white.
 	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage)
@@ -222,53 +212,54 @@ namespace WhiteLineDetection
 
 		return erodedImage;
 	}
-        
 
-    //Define callbacks
-    void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg){
-        if (!connected)
+	// Define callbacks
+	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
+	{
+		if (!connected)
 		{
-			//RCLCPP_ERROR("Received image without receiving camera info first. This should not occur, and is a logic error.");
+			RCLCPP_ERROR(this->get_logger(), "Received image without receiving camera info first. This should not occur, and is a logic error.");
 		}
 		else
 		{
-			//Decode image
+			// Decode image
 			auto cvImg = ptgrey2CVMat(msg);
-			//Perspective warp
+			// Perspective warp
 			auto warpedImg = shiftPerspective(cvImg);
-			//Filter non-white pixels out
+			// Filter non-white pixels out
 			auto filteredImg = imageFiltering(warpedImg);
-			//Convert pixels to pointcloud and publish
+			// Convert pixels to pointcloud and publish
 			getPixelPointCloud(filteredImg);
 
-			//Display to gui if enabled.
+			// Display to gui if enabled.
 			if (enableImShow)
 				display(cvImg, warpedImg, filteredImg);
 		}
-    }
-    
-    void WhiteLineDetection::cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg){
-        if (!connected) //attempt to prevent this callback from spamming.
+	}
+
+	void WhiteLineDetection::cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg)
+	{
+		if (!connected) // attempt to prevent this callback from spamming.
 		{
 			HEIGHT = msg->height;
 			WIDTH = msg->width;
-			//RCLCPP_INFO("Connected to camera");
+			RCLCPP_INFO(this->get_logger(),"Connected to camera");
 			connected = true;
 		}
-    }
+	}
 
 }
 int main(int argc, char *argv[])
 {
-    rclcpp::init(argc, argv);
-    rclcpp::executors::SingleThreadedExecutor exec;
-    rclcpp::NodeOptions options;
-    auto white_line_detection = std::make_shared<WhiteLineDetection::WhiteLineDetection>(options);
-    exec.add_node(white_line_detection);
-    white_line_detection->setupOCL();
-    //white_line_detection->createGUI();
-    white_line_detection->setupWarp();
-    exec.spin();
-    rclcpp::shutdown();
-    return 0;
+	rclcpp::init(argc, argv);
+	rclcpp::executors::SingleThreadedExecutor exec;
+	rclcpp::NodeOptions options;
+	auto white_line_detection = std::make_shared<WhiteLineDetection::WhiteLineDetection>(options);
+	exec.add_node(white_line_detection);
+	white_line_detection->setupOCL();
+	// white_line_detection->createGUI();
+	white_line_detection->setupWarp();
+	exec.spin();
+	rclcpp::shutdown();
+	return 0;
 }

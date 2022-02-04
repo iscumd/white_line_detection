@@ -27,11 +27,15 @@ namespace WhiteLineDetection
         void createGUI();
     private:
         //Define variables
+
+        /// True when connected to the camera.
         bool connected{false};
+        /// Resolution components of the camera.
         int HEIGHT{}, WIDTH{};
         int upperColor{255}; 
         int highB, highG, highR;
         int lowB, lowG, lowR;
+
         cv::UMat Utransmtx;
         cv::Rect ROI;
         cv::Mat erosionKernel;
