@@ -35,27 +35,29 @@ namespace WhiteLineDetection
         camera_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(//TODO: MAYBE MAKE THIS TOPIC PATH A PARAMETER
         "/camera/camera_points", rclcpp::SensorDataQoS());
 
-        //Define Parameters
-        A = this->declare_parameter("calibration_constants_A", 0.0);
-        B = this->declare_parameter("calibration_constants_B", 0.0);
-        C = this->declare_parameter("calibration_constants_C", 0.0);
-        D = this->declare_parameter("calibration_constants_D", 0.0);
-        tl_x = this->declare_parameter("pixel_coordinates_tl_x", 112.0);
-        tl_y = this->declare_parameter("pixel_coordinates_tl_y", 12.0);
-        tr_x = this->declare_parameter("pixel_coordinates_tr_x", 1558.0);
-        tr_y = this->declare_parameter("pixel_coordinates_tr_y", 12.0);
-        bl_x = this->declare_parameter("pixel_coordinates_bl_x", 112.0);
-        bl_y = this->declare_parameter("pixel_coordinates_bl_y", 1558.0);
-        br_x = this->declare_parameter("pixel_coordinates_br_x", 1558.0);
-        br_y = this->declare_parameter("pixel_coordinates_br_y", 908.0);
-        ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0); // width / height of the actual panel on the ground
-        lowColor = this->declare_parameter("lower_bound_white", 160); 
-        kernelSize = this->declare_parameter("kernel_size", 5);
-        nthPixel = this->declare_parameter("sample_nth_pixel", 5);
-        enableImShow = this->declare_parameter("enable_imshow", false);
 
 
-        
+		// Define Parameters
+		A = this->declare_parameter("calibration_constants_A", 1.0);
+		B = this->declare_parameter("calibration_constants_B", 1.0);
+		C = this->declare_parameter("calibration_constants_C", 1.0);
+		D = this->declare_parameter("calibration_constants_D", 1.0);
+
+		// Warp params
+		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0.0);
+		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0.0);
+		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 320.0);
+		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0.0);
+		bl_x = this->declare_parameter("pixel_coordinates_bl_x", 0.0);
+		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 240.0);
+		br_x = this->declare_parameter("pixel_coordinates_br_x", 320.0);
+		br_y = this->declare_parameter("pixel_coordinates_br_y", 240.0);
+		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
+
+		lowColor = this->declare_parameter("lower_bound_white", 160);
+		kernelSize = this->declare_parameter("kernel_size", 5);
+		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
+		enableImShow = this->declare_parameter("enable_imshow", false);
 
         //Define CV variables
         erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
@@ -210,7 +212,7 @@ namespace WhiteLineDetection
 	}
 
 
-    /// Filters non-white pixels out of the warped image.
+  /// Filters non-white pixels out of the warped image.
 	///
 	/// Returns the eroded image matrix. The only pixels left should be white.
 	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage)
