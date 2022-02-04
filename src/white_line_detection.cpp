@@ -59,7 +59,7 @@ namespace WhiteLineDetection
 
         //Define CV variables
         erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
-        ROI = cv::Rect(112, 12, 1670 - 112, 920 - 12);
+        ROI = cv::Rect(12, 12, 320-20, 240-20);
     }
 
 	///Sets up the GPU to run our code using OpenCl.
