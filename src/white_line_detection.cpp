@@ -25,7 +25,7 @@ namespace WhiteLineDetection
     {
         //Define topic subscriptions and publishers
         raw_img_subscription_ = this->create_subscription<sensor_msgs::msg::Image>( //TODO: MAKE THIS TOPIC PATH A PARAMETER
-        "/kohm/unfiltered_image", 10,
+        "/camera/image_raw", rclcpp::SensorDataQoS(),
         std::bind(&WhiteLineDetection::raw_img_callback, this, std::placeholders::_1));
         
         cam_info_subscription_ = this->create_subscription<sensor_msgs::msg::CameraInfo>( //TODO: MAKE THIS TOPIC PATH A PARAMETER
@@ -190,7 +190,7 @@ namespace WhiteLineDetection
 	/// Returns the cv matrix form of the image.
     cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg)
 	{
-		auto cvImage = cv_bridge::toCvCopy(imageMsg, "CV_8UC3"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
+		auto cvImage = cv_bridge::toCvCopy(imageMsg, "mono8"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
 		return cvImage->image.getUMat(cv::ACCESS_RW);			 //TODO make sure this access is correct.
 	}
 
@@ -236,6 +236,7 @@ namespace WhiteLineDetection
 			auto cvImg = ptgrey2CVMat(msg);
 			//Perspective warp
 			auto warpedImg = shiftPerspective(cvImg);
+			std::cout << "here" << std::endl;
 			//Filter non-white pixels out
 			auto filteredImg = imageFiltering(warpedImg);
 			//Convert pixels to pointcloud and publish
@@ -252,7 +253,7 @@ namespace WhiteLineDetection
 		{
 			HEIGHT = msg->height;
 			WIDTH = msg->width;
-			//RCLCPP_INFO("Connected to camera");
+			RCLCPP_INFO(this->get_logger(), "Connected to camera");
 			connected = true;
 		}
     }
