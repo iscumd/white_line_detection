@@ -16,6 +16,8 @@
 #include "cv_bridge/cv_bridge.h"
 #include <cv_bridge/rgb_colors.h>
 #include "cv_bridge/cv_bridge_export.h"
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_types.h>
 
 namespace WhiteLineDetection
 {
@@ -147,8 +149,8 @@ namespace WhiteLineDetection
 	/// in the pointcloud. This pointcloud is then broadcast, allowing the nav stack to see the white lines as obsticles.
 	void WhiteLineDetection::getPixelPointCloud(cv::Mat &erodedImage) const
 	{
-		sensor_msgs::msg::PointCloud msg;
-  		sensor_msgs::msg::PointCloud2::SharedPtr msg2(new sensor_msgs::msg::PointCloud2);
+		pcl::PointCloud<pcl::PointXYZ> pointcl;
+		sensor_msgs::msg::PointCloud2 pcl_msg;
 		std::vector<cv::Point> pixelCoordinates;
 
 		cv::findNonZero(erodedImage, pixelCoordinates);
@@ -157,17 +159,19 @@ namespace WhiteLineDetection
 		{
 			if (i % nthPixel == 0)
 			{
-				geometry_msgs::msg::Point32 pixelLoc;
 				// XY distances of each white pixel relative to robot
-				pixelLoc.x = (A * pixelCoordinates[i].x) + B;
-				pixelLoc.y = (C * pixelCoordinates[i].y) + D;
-				msg.points.push_back(pixelLoc);
+				pcl::PointXYZ new_point;
+				new_point.x = (A * pixelCoordinates[i].x) + B;
+				new_point.y = (C * pixelCoordinates[i].y) + D;
+				new_point.z = 0.0;
+				pointcl.points.push_back(new_point);
 			}
 		}
-		sensor_msgs::convertPointCloudToPointCloud2(msg, *msg2);
 		
-		msg2->header.frame_id = "camera_link"; //Fix for gazebo
-		camera_cloud_publisher_->publish(*msg2);
+		pcl_msg.header.frame_id = "base_footprint"; // Note: says relative to robot...
+		pcl::toROSMsg(pointcl, pcl_msg);
+
+		camera_cloud_publisher_->publish(pcl_msg);
 	}
 
 	void WhiteLineDetection::createGUI()

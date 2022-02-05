@@ -22,9 +22,8 @@ find_package(cv_bridge REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(pcl_conversions REQUIRED)
+find_package(pcl_ros REQUIRED)
 
 add_executable(white_line_detection src/white_line_detection.cpp)
 ament_target_dependencies(
@@ -33,6 +32,8 @@ ament_target_dependencies(
   sensor_msgs
   std_msgs
   cv_bridge
+  pcl_conversions
+  pcl_ros
 )
 
 target_include_directories(white_line_detection PUBLIC
