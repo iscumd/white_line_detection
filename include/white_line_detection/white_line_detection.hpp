@@ -44,7 +44,7 @@ namespace WhiteLineDetection
         int lowB, lowG, lowR;
 
         /// The 3x3 perspective transform matrix. Should be treated as constant.
-        cv::UMat Utransmtx;
+        cv::Mat Utransmtx;
         /// The region of intrest.
         cv::Rect ROI;
         /// Kernal used for white pixel filtering.
@@ -69,11 +69,11 @@ namespace WhiteLineDetection
         void cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
         // Define other image pipeline functions
-        void getPixelPointCloud(cv::UMat &erodedImage) const;
-        void display(cv::UMat &Uinput, cv::UMat &Utransformed, cv::UMat &Uerosion) const;
-        cv::UMat imageFiltering(cv::UMat &warpedImage) const;
-        cv::UMat shiftPerspective(cv::UMat &inputImage) const;
-        cv::UMat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const;
+        void getPixelPointCloud(cv::Mat &erodedImage) const;
+        void display(cv::Mat &Uinput, cv::Mat &Utransformed, cv::Mat &Uerosion) const;
+        cv::Mat imageFiltering(cv::Mat &warpedImage) const;
+        cv::Mat shiftPerspective(cv::Mat &inputImage) const;
+        cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const;
 
         // empty callback functions but it is the only way to increment the sliders
         static void lowBlueTrackbar(int, void *) {}
@@ -89,6 +89,9 @@ namespace WhiteLineDetection
 
         // Define publishers
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr camera_cloud_publisher_;
+
+        // TODO remove test topic that publishes the filtered images
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr img_test_;
     };
 }
 

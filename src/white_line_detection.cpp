@@ -15,6 +15,7 @@
 #include <image_transport/image_transport.hpp>
 #include "cv_bridge/cv_bridge.h"
 #include <cv_bridge/rgb_colors.h>
+#include "cv_bridge/cv_bridge_export.h"
 
 namespace WhiteLineDetection
 {
@@ -33,11 +34,14 @@ namespace WhiteLineDetection
 		camera_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
 			"/camera/camera_points", rclcpp::SensorDataQoS());
 
+		img_test_ = this->create_publisher<sensor_msgs::msg::Image>(
+			"/camera/test_img", rclcpp::SensorDataQoS());
+
 		// Define Parameters
-		A = this->declare_parameter("calibration_constants_A", 1.0);
-		B = this->declare_parameter("calibration_constants_B", 1.0);
-		C = this->declare_parameter("calibration_constants_C", 1.0);
-		D = this->declare_parameter("calibration_constants_D", 1.0);
+		A = this->declare_parameter("calibration_constants_A", 0.01);
+		B = this->declare_parameter("calibration_constants_B", 0.01);
+		C = this->declare_parameter("calibration_constants_C", 0.01);
+		D = this->declare_parameter("calibration_constants_D", 0.01);
 
 		// Warp params
 		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0.0);
@@ -52,9 +56,16 @@ namespace WhiteLineDetection
 		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
 
 		lowColor = this->declare_parameter("lower_bound_white", 160);
+		lowB = lowColor;
+		lowG = lowColor;
+		lowR = lowColor;
+		highB = upperColor;
+		highG = upperColor;
+		highR = upperColor;
+
 		kernelSize = this->declare_parameter("kernel_size", 5);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
-		enableImShow = this->declare_parameter("enable_imshow", false);
+		enableImShow = this->declare_parameter("enable_imshow", true);
 
     //Define CV variables
     erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
@@ -134,10 +145,10 @@ namespace WhiteLineDetection
 	///
 	/// This function works by offsetting each pixel by some calibrated constants to get the geographical lie of that pixel, which becomes a point
 	/// in the pointcloud. This pointcloud is then broadcast, allowing the nav stack to see the white lines as obsticles.
-	void WhiteLineDetection::getPixelPointCloud(cv::UMat &erodedImage) const
+	void WhiteLineDetection::getPixelPointCloud(cv::Mat &erodedImage) const
 	{
 		sensor_msgs::msg::PointCloud msg;
-  sensor_msgs::msg::PointCloud2::SharedPtr msg2(new sensor_msgs::msg::PointCloud2);
+  		sensor_msgs::msg::PointCloud2::SharedPtr msg2(new sensor_msgs::msg::PointCloud2);
 		std::vector<cv::Point> pixelCoordinates;
 
 		cv::findNonZero(erodedImage, pixelCoordinates);
@@ -161,10 +172,10 @@ namespace WhiteLineDetection
 
 	void WhiteLineDetection::createGUI()
 	{
-		cv::namedWindow("original", cv::WINDOW_FREERATIO);
-		cv::namedWindow("erosion", cv::WINDOW_FREERATIO);
-		cv::namedWindow("warp", cv::WINDOW_FREERATIO);
-		cv::namedWindow("TRACKBARS", cv::WINDOW_FREERATIO);
+		cv::namedWindow("original", cv::WINDOW_AUTOSIZE);
+		cv::namedWindow("erosion", cv::WINDOW_AUTOSIZE);
+		cv::namedWindow("warp", cv::WINDOW_AUTOSIZE);
+		cv::namedWindow("TRACKBARS", cv::WINDOW_AUTOSIZE);
 		//*****************GUI related *********************************
 		cv::createTrackbar("Low Blue", "TRACKBARS", &lowB, upperColor, lowBlueTrackbar);
 		cv::createTrackbar("Low Green", "TRACKBARS", &lowG, upperColor, lowGreenTrackbar);
@@ -175,7 +186,7 @@ namespace WhiteLineDetection
 	}
 
 	/// Updates the displayed guis with the last processed image.
-	void WhiteLineDetection::display(cv::UMat &Uinput, cv::UMat &Utransformed, cv::UMat &Uerosion) const
+	void WhiteLineDetection::display(cv::Mat &Uinput, cv::Mat &Utransformed, cv::Mat &Uerosion) const
 	{
 		cv::imshow("original", Uinput);
 		cv::imshow("warp", Utransformed);
@@ -185,19 +196,19 @@ namespace WhiteLineDetection
 	/// Converts a raw image to an openCv matrix. This function should decode the image properly automatically.
 	///
 	/// Returns the cv matrix form of the image.
-	cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const
+	cv::Mat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const
 	{
 		auto cvImage = cv_bridge::toCvCopy(imageMsg, "mono8"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
-		return cvImage->image.getUMat(cv::ACCESS_RW);			 //TODO make sure this access is correct.
+		return cvImage->image;
 	}
 
 	/// Applies the perspective warp to the image.
 	///
 	/// Returns the warped image matrix.
-	cv::UMat WhiteLineDetection::shiftPerspective(cv::UMat &inputImage) const
+	cv::Mat WhiteLineDetection::shiftPerspective(cv::Mat &inputImage) const
 	{
 		// The transformed image
-		auto transformed = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
+		auto transformed = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
 		cv::warpPerspective(inputImage, transformed, Utransmtx, transformed.size());
 
 		return transformed(ROI);
@@ -206,10 +217,10 @@ namespace WhiteLineDetection
   /// Filters non-white pixels out of the warped image.
 	///
 	/// Returns the eroded image matrix. The only pixels left should be white.
-	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage) const
+	cv::Mat WhiteLineDetection::imageFiltering(cv::Mat &warpedImage) const
 	{
-		auto binaryImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
-		auto erodedImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
+		auto binaryImage = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
+		auto erodedImage = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
 
 		cv::inRange(warpedImage, cv::Scalar(lowB, lowG, lowR), cv::Scalar(highB, highG, highR), binaryImage);
 		cv::erode(binaryImage, erodedImage, erosionKernel);
@@ -227,12 +238,24 @@ namespace WhiteLineDetection
 		}
 		else
 		{
+            //RCLCPP_INFO(this->get_logger(),"Recived image!");
+            
 			// Decode image
 			auto cvImg = ptgrey2CVMat(msg);
 			// Perspective warp
 			auto warpedImg = shiftPerspective(cvImg);
 			// Filter non-white pixels out
 			auto filteredImg = imageFiltering(warpedImg);
+
+			// TODO remove later, outputs an image as a topic
+			auto hdr = std_msgs::msg::Header{};
+			hdr.frame_id = "camera_link";
+			hdr.stamp = this->get_clock()->now();
+			auto out = cv_bridge::CvImage{hdr, "mono8", filteredImg};
+			auto img = sensor_msgs::msg::Image{};
+			out.toImageMsg(img);
+			this->img_test_->publish(img);
+
 			// Convert pixels to pointcloud and publish
 			getPixelPointCloud(filteredImg);
 
