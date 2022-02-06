@@ -41,23 +41,6 @@ namespace WhiteLineDetection
 			"/camera/test_img", rclcpp::SensorDataQoS());
 
 		// Define Parameters
-		A = this->declare_parameter("calibration_constants_A", 0.01); // TODO purge
-		B = this->declare_parameter("calibration_constants_B", 0.01);
-		C = this->declare_parameter("calibration_constants_C", 0.01);
-		D = this->declare_parameter("calibration_constants_D", 0.01);
-
-		// Warp params
-		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0.0);
-		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0.0);
-		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 320.0);
-		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0.0);
-		bl_x = this->declare_parameter("pixel_coordinates_bl_x", 0.0);
-		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 240.0);
-		br_x = this->declare_parameter("pixel_coordinates_br_x", 320.0);
-		br_y = this->declare_parameter("pixel_coordinates_br_y", 240.0);
-
-		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
-
 		lowColor = this->declare_parameter("lower_bound_white", 160);
 		lowB = lowColor;
 		lowG = lowColor;
@@ -73,6 +56,7 @@ namespace WhiteLineDetection
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
 		map_frame = this->declare_parameter("map_frame", "map");
+		
 		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
@@ -122,36 +106,9 @@ namespace WhiteLineDetection
 		std::cout << d.OpenCLVersion() << std::endl;
 	}
 
-	/// Sets up the constant perspective transform matrix as defined by node params.
-	void WhiteLineDetection::setupWarp()
-	{
-		cv::Point Q1 = cv::Point2f(tl_x, tl_y); // top left pixel coordinate
-		cv::Point Q2 = cv::Point2f(tr_x, tr_y); // top right
-		cv::Point Q3 = cv::Point2f(br_x, br_y); // bottom right
-		cv::Point Q4 = cv::Point2f(bl_x, bl_y); // bottom left
-
-		// The dimensions of Ohms board(?)
-		double boardH = sqrt((Q3.x - Q2.x) * (Q3.x - Q2.x) + (Q3.y - Q2.y) * (Q3.y - Q2.y));
-		double boardW = ratio * boardH;
-
-		cv::Rect R(Q1.x, Q1.y, boardW, boardH);
-
-		cv::Point R1 = cv::Point2f(R.x, R.y);
-		cv::Point R2 = cv::Point2f(R.x + R.width, R.y);
-		cv::Point R3 = cv::Point2f(cv::Point2f(R.x + R.width, R.y + R.height));
-		cv::Point R4 = cv::Point2f(cv::Point2f(R.x, R.y + R.height));
-
-		std::vector<cv::Point2f> squarePts{R1, R2, R3, R4};
-		std::vector<cv::Point2f> quadPts{Q1, Q2, Q3, Q4};
-
-		// Copy transform to constant feild
-		auto transmtx = cv::getPerspectiveTransform(quadPts, squarePts);
-		transmtx.copyTo(Utransmtx);
-	}
-
 	/// Converts the white pixel matrix into a pointcloud, then publishes the pointclouds.
 	///
-	/// This function works by intersecting the ground plane with a ray cast from each white pixel location, and converting that point to a PCL. 
+	/// This function works by intersecting the ground plane with a ray cast from each white pixel location, and converting that point to a PCL.
 	/// This pointcloud is then broadcast, allowing the nav stack to see the white lines as obsticles.
 	void WhiteLineDetection::getPixelPointCloud(cv::Mat &erodedImage) const
 	{
@@ -167,9 +124,9 @@ namespace WhiteLineDetection
 			if (i % nthPixel == 0)
 			{
 				auto ray = cameraModel.projectPixelTo3dRay(pixelCoordinates[i]); // Get ray out of camera, correcting for tilt and pan
-				auto ray_point = camera_to_ground_trans.transform.translation; // The position of the camera is its offset from the origin (map frame)
-				auto normal = cv::Vec3f{0.0, 0.0, 1.0};		 // Assume flat plane
-				auto plane_point = cv::Vec3f{0.0, 0.0, 0.0}; // Assume 0,0,0 in plane
+				auto ray_point = camera_to_ground_trans.transform.translation;	 // The position of the camera is its offset from the origin (map frame)
+				auto normal = cv::Vec3f{0.0, 0.0, 1.0};							 // Assume flat plane
+				auto plane_point = cv::Vec3f{0.0, 0.0, 0.0};					 // Assume 0,0,0 in plane
 
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
@@ -178,7 +135,7 @@ namespace WhiteLineDetection
 			}
 		}
 
-		pcl_msg.header.frame_id = "map"; //Because we use map_frame->camera_frame translation as our camera point
+		pcl_msg.header.frame_id = "map"; // Because we use map_frame->camera_frame translation as our camera point
 		pcl::toROSMsg(pointcl, pcl_msg);
 
 		camera_cloud_publisher_->publish(pcl_msg);
@@ -188,7 +145,6 @@ namespace WhiteLineDetection
 	{
 		cv::namedWindow("original", cv::WINDOW_AUTOSIZE);
 		cv::namedWindow("erosion", cv::WINDOW_AUTOSIZE);
-		cv::namedWindow("warp", cv::WINDOW_AUTOSIZE);
 		cv::namedWindow("TRACKBARS", cv::WINDOW_AUTOSIZE);
 		//*****************GUI related *********************************
 		cv::createTrackbar("Low Blue", "TRACKBARS", &lowB, upperColor, lowBlueTrackbar);
@@ -200,10 +156,9 @@ namespace WhiteLineDetection
 	}
 
 	/// Updates the displayed guis with the last processed image.
-	void WhiteLineDetection::display(cv::Mat &Uinput, cv::Mat &Utransformed, cv::Mat &Uerosion) const
+	void WhiteLineDetection::display(cv::Mat &Uinput, cv::Mat &Uerosion) const
 	{
 		cv::imshow("original", Uinput);
-		cv::imshow("warp", Utransformed);
 		cv::imshow("erosion", Uerosion);
 	}
 
@@ -214,18 +169,6 @@ namespace WhiteLineDetection
 	{
 		auto cvImage = cv_bridge::toCvCopy(imageMsg, "mono8"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
 		return cvImage->image;
-	}
-
-	/// Applies the perspective warp to the image.
-	///
-	/// Returns the warped image matrix.
-	cv::Mat WhiteLineDetection::shiftPerspective(cv::Mat &inputImage) const
-	{
-		// The transformed image
-		auto transformed = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
-		cv::warpPerspective(inputImage, transformed, Utransmtx, transformed.size());
-
-		return transformed(ROI);
 	}
 
 	/// Filters non-white pixels out of the warped image.
@@ -254,10 +197,8 @@ namespace WhiteLineDetection
 		{
 			// Decode image
 			auto cvImg = ptgrey2CVMat(msg);
-			// Perspective warp
-			auto warpedImg = shiftPerspective(cvImg);
 			// Filter non-white pixels out
-			auto filteredImg = imageFiltering(warpedImg);
+			auto filteredImg = imageFiltering(cvImg);
 
 			// TODO remove later, outputs an image as a topic
 			auto hdr = std_msgs::msg::Header{};
@@ -273,7 +214,7 @@ namespace WhiteLineDetection
 
 			// Display to gui if enabled.
 			if (enableImShow)
-				display(cvImg, warpedImg, filteredImg);
+				display(cvImg, filteredImg);
 		}
 	}
 
@@ -302,7 +243,7 @@ int main(int argc, char *argv[])
 	auto white_line_detection = std::make_shared<WhiteLineDetection::WhiteLineDetection>(options);
 	exec.add_node(white_line_detection);
 
-	white_line_detection->setupOCL();
+	// white_line_detection->setupOCL(); TODO make sure this is doing something then re-enable
 
 	// Only enable gui if set as it crashes otherwise
 	if (white_line_detection->enableImShow)
@@ -310,7 +251,6 @@ int main(int argc, char *argv[])
 		white_line_detection->createGUI();
 	}
 
-	white_line_detection->setupWarp();
 	exec.spin();
 	rclcpp::shutdown();
 	return 0;

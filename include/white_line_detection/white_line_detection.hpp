@@ -26,7 +26,6 @@ namespace WhiteLineDetection
     public:
         explicit WhiteLineDetection(rclcpp::NodeOptions options);
         void setupOCL();
-        void setupWarp();
         void createGUI();
 
         /// Enable the openCv visualization if set by the node param.
@@ -45,8 +44,6 @@ namespace WhiteLineDetection
         int highB, highG, highR;
         int lowB, lowG, lowR;
 
-        /// The 3x3 perspective transform matrix. Should be treated as constant.
-        cv::Mat Utransmtx;
         /// The region of intrest.
         cv::Rect ROI;
         /// Kernal used for white pixel filtering.
@@ -63,15 +60,6 @@ namespace WhiteLineDetection
         //Camera hight is relative to this frame
         std::string map_frame;
 
-        // Ros Params
-
-        /// Calibration constants. These are used for finding the offsets of the white pixels from the robot body.
-        double A, B, C, D;
-        /// width / height of the actual panel on the ground.
-        double ratio;
-        /// Warp pixel locations that do something
-        float tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
-
         /// The size of the erosion kernel.
         int kernelSize;
         /// The nth pixel to sample from the white pixels. Prevents spam to PCL2.
@@ -83,9 +71,8 @@ namespace WhiteLineDetection
 
         // Define other image pipeline functions
         void getPixelPointCloud(cv::Mat &erodedImage) const;
-        void display(cv::Mat &Uinput, cv::Mat &Utransformed, cv::Mat &Uerosion) const;
+        void display(cv::Mat &Uinput, cv::Mat &Uerosion) const;
         cv::Mat imageFiltering(cv::Mat &warpedImage) const;
-        cv::Mat shiftPerspective(cv::Mat &inputImage) const;
         cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const;
 
         // empty callback functions but it is the only way to increment the sliders
