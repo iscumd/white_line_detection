@@ -8,7 +8,6 @@
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "sensor_msgs/msg/point_cloud.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
-#include <sensor_msgs/point_cloud_conversion.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -56,7 +55,7 @@ namespace WhiteLineDetection
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
 		map_frame = this->declare_parameter("map_frame", "map");
-		
+
 		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
@@ -123,10 +122,10 @@ namespace WhiteLineDetection
 		{
 			if (i % nthPixel == 0)
 			{
-				auto ray = cameraModel.projectPixelTo3dRay(pixelCoordinates[i]); // Get ray out of camera, correcting for tilt and pan
-				auto ray_point = camera_to_ground_trans.transform.translation;	 // The position of the camera is its offset from the origin (map frame)
-				auto normal = cv::Vec3f{0.0, 0.0, 1.0};							 // Assume flat plane
-				auto plane_point = cv::Vec3f{0.0, 0.0, 0.0};					 // Assume 0,0,0 in plane
+				auto ray = raytracing::convertToOpenCvVec3(cameraModel.projectPixelTo3dRay(pixelCoordinates[i])); // Get ray out of camera, correcting for tilt and pan
+				auto ray_point = raytracing::convertToOpenCvVec3(camera_to_ground_trans.transform.translation);	  // The position of the camera is its offset from the origin (map frame)
+				auto normal = cv::Point3f{0.0, 0.0, 1.0};														  // Assume flat plane
+				auto plane_point = cv::Point3f{0.0, 0.0, 0.0};													  // Assume 0,0,0 in plane
 
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);

@@ -1,25 +1,42 @@
 #pragma once
 
 #include "pcl/point_types.h"
+#include "opencv2/core.hpp"
 
+// The generics in this file are somewhat useless rn, but in the case we get C++20 concepts, making a concept that bounds x,y,z members to require a static_cast<float> would let any vector3 type work.
+
+/// Implements 'raytracing' operations.
 namespace raytracing
 {
 
-    // Define some generic vector ops
+    /// Converts any type with x, y, and z members that can be casted to a float to a
+    /// cv::Point3f. This is to deal with C++14 generics being a mess.
+    template <typename Vec3>
+    auto convertToOpenCvVec3(Vec3 vec3) -> cv::Point3f
+    {
+        auto cv = cv::Point3f{};
+        cv.x = static_cast<float>(vec3.x);
+        cv.y = static_cast<float>(vec3.y);
+        cv.z = static_cast<float>(vec3.z);
+
+        return cv;
+    }
+
+    // Define some private generic vector ops
     namespace impl_
     {
         /// Dot product
-        template <typename Vec3>
-        auto dot(const Vec3 lhs, const Vec3 rhs) -> float
+        template <typename Vec3a, typename Vec3b>
+        auto dot(const Vec3a lhs, const Vec3b rhs) -> float
         {
             return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
         }
 
         /// Vector subtraction
-        template <typename Vec3>
-        auto sub(const Vec3 lhs, const Vec3 rhs) -> Vec3
+        template <typename Vec3a, typename Vec3b>
+        auto sub(const Vec3a lhs, const Vec3b rhs) -> Vec3a
         {
-            auto out = Vec3{};
+            auto out = Vec3a{};
             out.x = lhs.x - rhs.x;
             out.y = lhs.y - rhs.y;
             out.z = lhs.z - rhs.z;
@@ -49,11 +66,11 @@ namespace raytracing
     template <typename Vec3a, typename Vec3b, typename Vec3c, typename Vec3d, typename Point = pcl::PointXYZ>
     auto intersectLineAndPlane(const Vec3a ray, const Vec3b rayPoint, const Vec3c planeNormal, const Vec3d planePoint) -> Point
     {
-        Vec3a diff = sub(rayPoint, planePoint);
-        float prod1 = dot(diff, planeNormal);
-        float prod2 = dot(ray, planeNormal);
+        Vec3a diff = impl_::sub(rayPoint, planePoint);
+        float prod1 = impl_::dot(diff, planeNormal);
+        float prod2 = impl_::dot(ray, planeNormal);
         float prod3 = prod1 / prod2;
-        Vec3a final = sub(rayPoint, mult(ray, prod3));
+        Vec3a final = impl_::sub(rayPoint, impl_::mult(ray, prod3));
 
         Point out{};
         out.x = final.x;
