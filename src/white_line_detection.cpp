@@ -41,7 +41,7 @@ namespace WhiteLineDetection
 			"/camera/test_img", rclcpp::SensorDataQoS());
 
 		// Define Parameters
-		A = this->declare_parameter("calibration_constants_A", 0.01);
+		A = this->declare_parameter("calibration_constants_A", 0.01); // TODO purge
 		B = this->declare_parameter("calibration_constants_B", 0.01);
 		C = this->declare_parameter("calibration_constants_C", 0.01);
 		D = this->declare_parameter("calibration_constants_D", 0.01);
@@ -55,7 +55,7 @@ namespace WhiteLineDetection
 		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 240.0);
 		br_x = this->declare_parameter("pixel_coordinates_br_x", 320.0);
 		br_y = this->declare_parameter("pixel_coordinates_br_y", 240.0);
-      
+
 		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
 
 		lowColor = this->declare_parameter("lower_bound_white", 160);
@@ -70,12 +70,17 @@ namespace WhiteLineDetection
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
 		enableImShow = this->declare_parameter("enable_imshow", true);
 
-    //Define CV variables
-    erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
-    
-    }
+		// Tf stuff
+		camera_frame = this->declare_parameter("camera_frame", "camera_link");
+		map_frame = this->declare_parameter("map_frame", "map");
+		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
-	///Sets up the GPU to run our code using OpenCl.
+		// Define CV variables
+		erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
+	}
+
+	/// Sets up the GPU to run our code using OpenCl.
 
 	void WhiteLineDetection::setupOCL()
 	{
@@ -146,30 +151,34 @@ namespace WhiteLineDetection
 
 	/// Converts the white pixel matrix into a pointcloud, then publishes the pointclouds.
 	///
-	/// This function works by offsetting each pixel by some calibrated constants to get the geographical lie of that pixel, which becomes a point
-	/// in the pointcloud. This pointcloud is then broadcast, allowing the nav stack to see the white lines as obsticles.
+	/// This function works by intersecting the ground plane with a ray cast from each white pixel location, and converting that point to a PCL. 
+	/// This pointcloud is then broadcast, allowing the nav stack to see the white lines as obsticles.
 	void WhiteLineDetection::getPixelPointCloud(cv::Mat &erodedImage) const
 	{
 		pcl::PointCloud<pcl::PointXYZ> pointcl;
 		sensor_msgs::msg::PointCloud2 pcl_msg;
 		std::vector<cv::Point> pixelCoordinates;
+		auto camera_to_ground_trans = tf_buffer->lookupTransform(camera_frame, map_frame, tf2::TimePointZero);
 
 		cv::findNonZero(erodedImage, pixelCoordinates);
-		// Iter through all the white pixels, adding their locations to pointclouds.
-		for (size_t i = 0; i < pixelCoordinates.size(); i++) // TODO: Reconfigure this so that it works with PCL2 so we can stop using PCL
+		// Iter through all the white pixels, adding their locations to pointclouds by 'raytracing' their location on the map from the camera.
+		for (size_t i = 0; i < pixelCoordinates.size(); i++)
 		{
 			if (i % nthPixel == 0)
 			{
-				// XY distances of each white pixel relative to robot
-				pcl::PointXYZ new_point;
-				new_point.x = (A * pixelCoordinates[i].x) + B;
-				new_point.y = (C * pixelCoordinates[i].y) + D;
-				new_point.z = 0.0;
+				auto ray = cameraModel.projectPixelTo3dRay(pixelCoordinates[i]); // Get ray out of camera, correcting for tilt and pan
+				auto ray_point = camera_to_ground_trans.transform.translation; // The position of the camera is its offset from the origin (map frame)
+				auto normal = cv::Vec3f{0.0, 0.0, 1.0};		 // Assume flat plane
+				auto plane_point = cv::Vec3f{0.0, 0.0, 0.0}; // Assume 0,0,0 in plane
+
+				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
+				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
+
 				pointcl.points.push_back(new_point);
 			}
 		}
-		
-		pcl_msg.header.frame_id = "base_footprint"; // Note: says relative to robot...
+
+		pcl_msg.header.frame_id = "map"; //Because we use map_frame->camera_frame translation as our camera point
 		pcl::toROSMsg(pointcl, pcl_msg);
 
 		camera_cloud_publisher_->publish(pcl_msg);
@@ -219,7 +228,7 @@ namespace WhiteLineDetection
 		return transformed(ROI);
 	}
 
-  /// Filters non-white pixels out of the warped image.
+	/// Filters non-white pixels out of the warped image.
 	///
 	/// Returns the eroded image matrix. The only pixels left should be white.
 	cv::Mat WhiteLineDetection::imageFiltering(cv::Mat &warpedImage) const
@@ -234,7 +243,7 @@ namespace WhiteLineDetection
 	}
 
 	/// Callback passed to the image topic subscription. This produces a pointcloud for every
-	/// image sent on the topic. 
+	/// image sent on the topic.
 	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
 	{
 		if (!connected)
@@ -243,8 +252,6 @@ namespace WhiteLineDetection
 		}
 		else
 		{
-            //RCLCPP_INFO(this->get_logger(),"Recived image!");
-            
 			// Decode image
 			auto cvImg = ptgrey2CVMat(msg);
 			// Perspective warp
@@ -277,8 +284,10 @@ namespace WhiteLineDetection
 		{
 			HEIGHT = msg->height;
 			WIDTH = msg->width;
-			ROI = cv::Rect(12, 12, WIDTH-20, HEIGHT-20);
-			RCLCPP_INFO(this->get_logger(),"Connected to camera");
+			ROI = cv::Rect(12, 12, WIDTH - 20, HEIGHT - 20);
+			cameraModel.fromCameraInfo(*msg); // Calibrate camera model
+
+			RCLCPP_INFO(this->get_logger(), "Connected to camera");
 			connected = true;
 		}
 	}
@@ -296,7 +305,8 @@ int main(int argc, char *argv[])
 	white_line_detection->setupOCL();
 
 	// Only enable gui if set as it crashes otherwise
-	if (white_line_detection->enableImShow) {
+	if (white_line_detection->enableImShow)
+	{
 		white_line_detection->createGUI();
 	}
 
