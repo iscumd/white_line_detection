@@ -25,6 +25,7 @@ find_package(cv_bridge REQUIRED)
 find_package(image_geometry REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 add_executable(white_line_detection src/white_line_detection.cpp)
 ament_target_dependencies(
@@ -36,6 +37,7 @@ ament_target_dependencies(
   pcl_ros
   cv_bridge
   image_geometry
+  tf2_geometry_msgs
 )
 
 target_include_directories(white_line_detection PUBLIC

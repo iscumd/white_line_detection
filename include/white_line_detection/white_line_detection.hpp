@@ -16,6 +16,9 @@
 #include <image_transport/image_transport.hpp>
 #include "image_geometry/pinhole_camera_model.h"
 
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
+
 namespace WhiteLineDetection
 {
     class WhiteLineDetection : public rclcpp::Node
@@ -51,6 +54,14 @@ namespace WhiteLineDetection
 
         /// Model used for raycasting from the camera to ground.
         image_geometry::PinholeCameraModel cameraModel;
+
+        //Tf stuff
+        std::shared_ptr<tf2_ros::TransformListener> transform_listener{nullptr};
+        std::unique_ptr<tf2_ros::Buffer> tf_buffer;
+        //Frame to grab camera info from
+        std::string camera_frame;
+        //Camera hight is relative to this frame
+        std::string map_frame;
 
         // Ros Params
 
