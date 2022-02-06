@@ -14,6 +14,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <cv_bridge/rgb_colors.h>
 #include <image_transport/image_transport.hpp>
+#include "image_geometry/pinhole_camera_model.h"
 
 namespace WhiteLineDetection
 {
@@ -29,8 +30,6 @@ namespace WhiteLineDetection
         bool enableImShow;
 
     private:
-        // Define variables
-
         /// True when connected to the camera.
         bool connected{false};
 
@@ -49,6 +48,9 @@ namespace WhiteLineDetection
         cv::Rect ROI;
         /// Kernal used for white pixel filtering.
         cv::Mat erosionKernel;
+
+        /// Model used for raycasting from the camera to ground.
+        image_geometry::PinholeCameraModel cameraModel;
 
         // Ros Params
 
