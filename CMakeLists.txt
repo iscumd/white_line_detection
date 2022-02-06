@@ -18,10 +18,11 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(OpenCV 4 REQUIRED)
-find_package(cv_bridge REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(image_geometry REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
 
@@ -33,7 +34,8 @@ ament_target_dependencies(
   std_msgs
   pcl_conversions
   pcl_ros
-  vision_opencv
+  cv_bridge
+  image_geometry
 )
 
 target_include_directories(white_line_detection PUBLIC
