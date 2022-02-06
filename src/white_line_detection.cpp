@@ -144,10 +144,11 @@ namespace WhiteLineDetection
 
 				pointcl.points.push_back(new_point);
 			}
-		}
+		}//TODO it looks like the transform is messing this up somehow.
 
-		pcl_msg.header.frame_id = "map"; // Because we use map_frame->camera_frame translation as our camera point
 		pcl::toROSMsg(pointcl, pcl_msg);
+		pcl_msg.header.frame_id = "camera_link"; // Because we use map_frame->camera_frame translation as our camera point
+		pcl_msg.header.stamp = this->now();
 
 		camera_cloud_publisher_->publish(pcl_msg);
 	}
