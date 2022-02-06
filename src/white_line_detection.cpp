@@ -116,7 +116,16 @@ namespace WhiteLineDetection
 		std::vector<cv::Point> pixelCoordinates;
 
 		// The position of the camera is its offset from the origin (map frame)
-		const auto ray_point = raytracing::convertToOpenCvVec3(tf_buffer->lookupTransform(camera_frame, map_frame, tf2::TimePointZero).transform.translation);//TODO find time point
+		cv::Point3f ray_point;
+		try
+		{
+			ray_point = raytracing::convertToOpenCvVec3(tf_buffer->lookupTransform(camera_frame, map_frame, tf2::TimePointZero).transform.translation);
+		}
+		catch (std::exception &e)
+		{
+			RCLCPP_ERROR(this->get_logger(), "map->camera transform failed with: %s", e.what());
+			return; // Just early return if error
+		}
 
 		// Remove all non white pixels
 		cv::findNonZero(erodedImage, pixelCoordinates);
@@ -127,8 +136,8 @@ namespace WhiteLineDetection
 			if (i % nthPixel == 0)
 			{
 				const auto ray = raytracing::convertToOpenCvVec3(cameraModel.projectPixelTo3dRay(pixelCoordinates[i])); // Get ray out of camera, correcting for tilt and pan
-				const auto normal = cv::Point3f{0.0, 0.0, 1.0};														  // Assume flat plane
-				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};													  // Assume 0,0,0 in plane
+				const auto normal = cv::Point3f{0.0, 0.0, 1.0};															// Assume flat plane
+				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};													// Assume 0,0,0 in plane
 
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
@@ -191,7 +200,7 @@ namespace WhiteLineDetection
 	/// image sent on the topic.
 	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
 	{
-		//Lock connection to avoid race condition with cam info callback.
+		// Lock connection to avoid race condition with cam info callback.
 		const std::lock_guard<std::mutex> lock(this->connectionMtx);
 
 		if (!connected)
@@ -226,7 +235,7 @@ namespace WhiteLineDetection
 	/// Callback passed to the camera info sub.
 	void WhiteLineDetection::cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg)
 	{
-		//Lock connection to avoid race condition with image callback.
+		// Lock connection to avoid race condition with image callback.
 		const std::lock_guard<std::mutex> lock(this->connectionMtx);
 
 		if (!connected) // attempt to prevent this callback from spamming.
