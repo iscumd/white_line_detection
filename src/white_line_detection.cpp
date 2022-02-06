@@ -1,4 +1,5 @@
 #include "../include/white_line_detection/white_line_detection.hpp"
+#include "../include/white_line_detection/raytrace.hpp"
 
 #include <memory>
 #include <string>

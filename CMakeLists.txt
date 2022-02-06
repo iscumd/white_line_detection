@@ -31,9 +31,9 @@ ament_target_dependencies(
   rclcpp
   sensor_msgs
   std_msgs
-  cv_bridge
   pcl_conversions
   pcl_ros
+  vision_opencv
 )
 
 target_include_directories(white_line_detection PUBLIC
