@@ -2,6 +2,7 @@
 #define WHITE_LINE_DETECTION__WHITE_LINE_DETECTION_HPP_
 
 #include <memory>
+#include <mutex>
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/header.hpp"
 #include "sensor_msgs/msg/image.hpp"
@@ -34,6 +35,8 @@ namespace WhiteLineDetection
     private:
         /// True when connected to the camera.
         bool connected{false};
+        /// Prevents the race condition on connected.
+        std::mutex connectionMtx;
 
         /// Camera resolution as retrived from the camera_info topic.
         int HEIGHT{}, WIDTH{};
