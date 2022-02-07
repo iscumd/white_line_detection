@@ -18,6 +18,7 @@
 #include "cv_bridge/cv_bridge_export.h"
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_types.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace WhiteLineDetection
 {
@@ -115,11 +116,15 @@ namespace WhiteLineDetection
 		sensor_msgs::msg::PointCloud2 pcl_msg;
 		std::vector<cv::Point> pixelCoordinates;
 
-		// The position of the camera is its offset from the origin (map frame)
+		// The position of the camera is (0,0,height)
 		cv::Point3f ray_point;
+		tf2::Quaternion camera_rotation;
+
 		try
 		{
-			ray_point = raytracing::convertToOpenCvVec3(tf_buffer->lookupTransform(camera_frame, map_frame, tf2::TimePointZero).transform.translation);
+			auto trans = tf_buffer->lookupTransform("base_footprint", camera_frame, tf2::TimePointZero);
+			tf2::convert(trans.transform.rotation, camera_rotation);
+			ray_point = cv::Vec3f{0, 0, (float)trans.transform.translation.z};
 		}
 		catch (std::exception &e)
 		{
@@ -135,19 +140,22 @@ namespace WhiteLineDetection
 		{
 			if (i % nthPixel == 0)
 			{
-				const auto ray = raytracing::convertToOpenCvVec3(cameraModel.projectPixelTo3dRay(pixelCoordinates[i])); // Get ray out of camera, correcting for tilt and pan
-				const auto normal = cv::Point3f{0.0, 0.0, 1.0};															// Assume flat plane
-				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};													// Assume 0,0,0 in plane
+				auto ray_unrotated = raytracing::convertToOpenCvVec3(cameraModel.projectPixelTo3dRay(pixelCoordinates[i]));										 // Get ray out of camera, correcting for tilt and pan
+				auto ray = raytracing::convertTfToOpenCvVec3(tf2::quatRotate(camera_rotation, tf2::Vector3{ray_unrotated.x, ray_unrotated.y, ray_unrotated.z})); // Rotate ray by trans map->camera
+				const auto normal = cv::Point3f{0.0, 0.0, 1.0};																									 // Assume flat plane
+				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};																							 // Assume 0,0,0 in plane
 
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
 
+				new_point = raytracing::impl_::sub(new_point, ray_point); // Move the point down to be relative to camera_link
+
 				pointcl.points.push_back(new_point);
 			}
-		}//TODO it looks like the transform is messing this up somehow.
+		}
 
 		pcl::toROSMsg(pointcl, pcl_msg);
-		pcl_msg.header.frame_id = "camera_link"; // Because we use map_frame->camera_frame translation as our camera point
+		pcl_msg.header.frame_id = camera_frame; // Because we use map_frame->camera_frame translation as our camera point
 		pcl_msg.header.stamp = this->now();
 
 		camera_cloud_publisher_->publish(pcl_msg);

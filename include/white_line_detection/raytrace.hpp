@@ -22,6 +22,19 @@ namespace raytracing
         return cv;
     }
 
+    /// Converts any type with x(), y(), and z() member functions that can be casted to a float to a
+    /// cv::Point3f. This is to deal with C++14 generics being a mess.
+    template <typename Vec3>
+    auto convertTfToOpenCvVec3(Vec3 vec3) -> cv::Point3f
+    {
+        auto cv = cv::Point3f{};
+        cv.x = static_cast<float>(vec3.x());
+        cv.y = static_cast<float>(vec3.y());
+        cv.z = static_cast<float>(vec3.z());
+
+        return cv;
+    }
+
     // Define some private generic vector ops
     namespace impl_
     {
@@ -44,6 +57,18 @@ namespace raytracing
             return out;
         }
 
+        /// Vector addition
+        template <typename Vec3a, typename Vec3b>
+        auto add(const Vec3a lhs, const Vec3b rhs) -> Vec3a
+        {
+            auto out = Vec3a{};
+            out.x = lhs.x + rhs.x;
+            out.y = lhs.y + rhs.y;
+            out.z = lhs.z + rhs.z;
+
+            return out;
+        }
+
         /// Vector-Scalar multiplication
         template <typename Vec3>
         auto mult(const Vec3 lhs, float rhs) -> Vec3
@@ -52,6 +77,20 @@ namespace raytracing
             out.x = lhs.x * rhs;
             out.y = lhs.y * rhs;
             out.z = lhs.z * rhs;
+
+            return out;
+        }
+
+        /// Vector norm
+        template <typename Vec3>
+        auto norm(const Vec3 v) -> Vec3
+        {
+            float len = std::sqrt((v.x * v.x) + (v.y * v.y) + (v.z * v.z));
+
+            auto out = Vec3{};
+            out.x = v.x / len;
+            out.y = v.y / len;
+            out.z = v.z / len;
 
             return out;
         }
@@ -66,6 +105,7 @@ namespace raytracing
     template <typename Vec3a, typename Vec3b, typename Vec3c, typename Vec3d, typename Point = pcl::PointXYZ>
     auto intersectLineAndPlane(const Vec3a ray, const Vec3b rayPoint, const Vec3c planeNormal, const Vec3d planePoint) -> Point
     {
+
         Vec3a diff = impl_::sub(rayPoint, planePoint);
         float prod1 = impl_::dot(diff, planeNormal);
         float prod2 = impl_::dot(ray, planeNormal);
