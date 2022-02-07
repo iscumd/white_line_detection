@@ -148,14 +148,14 @@ namespace WhiteLineDetection
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
 
-				new_point = raytracing::impl_::sub(new_point, ray_point); // Move the point down to be relative to camera_link
+				std::swap(new_point.x, new_point.y);
 
 				pointcl.points.push_back(new_point);
 			}
 		}
 
 		pcl::toROSMsg(pointcl, pcl_msg);
-		pcl_msg.header.frame_id = camera_frame; // Because we use map_frame->camera_frame translation as our camera point
+		pcl_msg.header.frame_id = "base_footprint"; // Because we use map_frame->camera_frame translation as our camera point
 		pcl_msg.header.stamp = this->now();
 
 		camera_cloud_publisher_->publish(pcl_msg);
