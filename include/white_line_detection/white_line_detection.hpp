@@ -27,6 +27,7 @@ namespace WhiteLineDetection
     public:
         explicit WhiteLineDetection(rclcpp::NodeOptions options);
         void setupOCL();
+        void setupWarp();
         void createGUI();
 
         /// Enable the openCv visualization if set by the node param.
@@ -35,8 +36,6 @@ namespace WhiteLineDetection
     private:
         /// True when connected to the camera.
         bool connected{false};
-        /// Prevents the race condition on connected.
-        std::mutex connectionMtx;
 
         /// Camera resolution as retrived from the camera_info topic.
         int HEIGHT{}, WIDTH{};
@@ -47,6 +46,14 @@ namespace WhiteLineDetection
         int highB, highG, highR;
         int lowB, lowG, lowR;
 
+        /// Warp pixel locations of the raw image.
+        float tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
+
+        /// Ratio of width/heigth in the warped image. 1 would be square. 
+        float ratio;
+
+        /// The 3x3 perspective transform matrix. Should be treated as constant.
+        cv::Mat transmtx;
         /// The region of intrest.
         cv::Rect ROI;
         /// Kernal used for white pixel filtering.
@@ -77,6 +84,7 @@ namespace WhiteLineDetection
         void display(cv::Mat &Uinput, cv::Mat &Uerosion) const;
         cv::Mat imageFiltering(cv::Mat &warpedImage) const;
         cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const;
+        cv::Mat shiftPerspective(cv::Mat &inputImage) const;
 
         // empty callback functions but it is the only way to increment the sliders
         static void lowBlueTrackbar(int, void *) {}
