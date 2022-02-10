@@ -75,6 +75,9 @@ namespace WhiteLineDetection
 
 		// Define CV variables
 		erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
+
+		// Create warp matrix.
+		setupWarp();
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
@@ -146,8 +149,10 @@ namespace WhiteLineDetection
 		std::vector<cv::Point2f> quadPts{Q1, Q2, Q3, Q4};
 
 		// Copy transform to constant feild
-		cv::Mat transmtx = cv::getPerspectiveTransform(quadPts, squarePts);
-		transmtx.copyTo(transmtx);
+		auto transmtx_double = cv::getPerspectiveTransform(quadPts, squarePts);
+
+		// Explicitly convert to floats, will be double and fail an assert otherwise
+		transmtx_double.convertTo(transmtx, CV_32FC1);
 	}
 
 	/// Converts the white pixel matrix into a pointcloud, then publishes the pointclouds.
@@ -254,11 +259,14 @@ namespace WhiteLineDetection
 	/// Returns the warped image matrix.
 	cv::Mat WhiteLineDetection::shiftPerspective(cv::Mat &inputImage) const
 	{
+		// auto msg = raytracing::matToString(transmtx); //Used in testing
+		// RCLCPP_INFO(this->get_logger(), "transform matrix: %s ", msg.c_str());
+
 		// The transformed image
 		auto transformed = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
 		cv::warpPerspective(inputImage, transformed, transmtx, transformed.size());
 
-		return transformed(ROI); //Contrain to region
+		return transformed(ROI); // Contrain to region
 	}
 
 	/// Callback passed to the image topic subscription. This produces a pointcloud for every
@@ -322,8 +330,6 @@ int main(int argc, char *argv[])
 	rclcpp::NodeOptions options;
 	auto white_line_detection = std::make_shared<WhiteLineDetection::WhiteLineDetection>(options);
 	exec.add_node(white_line_detection);
-
-	white_line_detection->setupWarp();
 
 	// white_line_detection->setupOCL(); TODO make sure this is doing something then re-enable
 
