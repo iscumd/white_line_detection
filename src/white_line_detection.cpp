@@ -51,7 +51,7 @@ namespace WhiteLineDetection
 		highR = upperColor;
 
 		// Warp params
-		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0.0);
+		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 105.0);
 		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0.0);
 		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 320.0);
 		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0.0);
@@ -190,7 +190,7 @@ namespace WhiteLineDetection
 			if (i % nthPixel == 0)
 			{
 				auto ray_unrotated = raytracing::convertToOpenCvVec3(cameraModel.projectPixelTo3dRay(pixelCoordinates[i]));										 // Get ray out of camera, correcting for tilt and pan
-				auto ray = raytracing::convertTfToOpenCvVec3(tf2::quatRotate(camera_rotation, tf2::Vector3{ray_unrotated.x, ray_unrotated.y, ray_unrotated.z})); // Rotate ray by trans map->camera
+				auto ray = raytracing::convertTfToOpenCvVec3(tf2::quatRotate(camera_rotation.normalized(), tf2::Vector3{ray_unrotated.x, ray_unrotated.y, ray_unrotated.z})); // Rotate ray by trans map->camera
 				const auto normal = cv::Point3f{0.0, 0.0, 1.0};																									 // Assume flat plane
 				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};																							 // Assume 0,0,0 in plane
 
@@ -198,6 +198,7 @@ namespace WhiteLineDetection
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
 
 				std::swap(new_point.x, new_point.y); // Camera x,y are opposite of right hand rule frame coords
+				//TODO shift points to the left.
 
 				pointcl.points.push_back(new_point);
 			}
