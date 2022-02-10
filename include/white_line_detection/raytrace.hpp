@@ -9,10 +9,18 @@
 namespace raytracing
 {
 
+    // Formats matrix to string in R formatting.
+    auto matToString(const cv::Mat &mat) noexcept -> std::string
+    {
+        std::stringstream ss;
+        ss << mat;
+        return ss.str();
+    }
+
     /// Converts any type with x, y, and z members that can be casted to a float to a
     /// cv::Point3f. This is to deal with C++14 generics being a mess.
     template <typename Vec3>
-    auto convertToOpenCvVec3(Vec3 vec3) -> cv::Point3f
+    auto convertToOpenCvVec3(Vec3 vec3) noexcept -> cv::Point3f
     {
         auto cv = cv::Point3f{};
         cv.x = static_cast<float>(vec3.x);
@@ -25,7 +33,7 @@ namespace raytracing
     /// Converts any type with x(), y(), and z() member functions that can be casted to a float to a
     /// cv::Point3f. This is to deal with C++14 generics being a mess.
     template <typename Vec3>
-    auto convertTfToOpenCvVec3(Vec3 vec3) -> cv::Point3f
+    auto convertTfToOpenCvVec3(Vec3 vec3) noexcept -> cv::Point3f
     {
         auto cv = cv::Point3f{};
         cv.x = static_cast<float>(vec3.x());
