@@ -64,7 +64,7 @@ namespace WhiteLineDetection
 
 		kernelSize = this->declare_parameter("kernel_size", 5);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
-		enableImShow = this->declare_parameter("enable_imshow", true);
+		enableImShow = this->declare_parameter("enable_imshow", false);
 
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
@@ -131,12 +131,12 @@ namespace WhiteLineDetection
 		cv::Point Q3 = cv::Point2f(br_x, br_y); // bottom right
 		cv::Point Q4 = cv::Point2f(bl_x, bl_y); // bottom left
 
-		// Take the Pythagorean theorem of the right side (which may be a triangle) to find the hight of the final image (equal to that triangles hypotanuse).
+		// Take the Pythagorean theorem of the right side (which may be a triangle) to find the height of the final image (equal to that triangles hypotanuse).
 		float recth = sqrt((Q3.x - Q2.x) * (Q3.x - Q2.x) + (Q3.y - Q2.y) * (Q3.y - Q2.y));
-		// Apply image ratio based off above hight.
+		// Apply image ratio based off above height.
 		float rectw = ratio * recth;
 
-		// Create a rectangle with top left corner in the top left coord of the source image, and with width and highth calced above.
+		// Create a rectangle with top left corner in the top left coord of the source image, and with width and height calced above.
 		cv::Rect R(Q1.x, Q1.y, rectw, recth);
 
 		// The destination coordinates in the warped image.
@@ -181,6 +181,12 @@ namespace WhiteLineDetection
 			return; // Just early return if error
 		}
 
+		//Rotate the image by 90 degrees to fix an issue with placing points in the point cloud
+		//TODO: Figure out why this needs to be done cause it shouldnt need to be
+		cv::Point2f center((erodedImage.cols - 1) / 2.0, (erodedImage.rows - 1) / 2.0);
+		cv::Mat rotation_matix = getRotationMatrix2D(center, -90, 1.0);
+		cv::warpAffine(erodedImage, erodedImage, rotation_matix, erodedImage.size());
+
 		// Remove all non white pixels
 		cv::findNonZero(erodedImage, pixelCoordinates);
 
@@ -197,8 +203,10 @@ namespace WhiteLineDetection
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
 
-				std::swap(new_point.x, new_point.y); // Camera x,y are opposite of right hand rule frame coords
-				//TODO shift points to the left.
+				//std::swap(new_point.x, new_point.y); // Camera x,y are opposite of right hand rule frame coords
+
+				//Flip all points over y axis cause their initially placed behind ohm for some reason
+				new_point.x = -(new_point.x);
 
 				pointcl.points.push_back(new_point);
 			}
