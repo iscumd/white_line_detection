@@ -51,7 +51,7 @@ namespace WhiteLineDetection
 		highR = upperColor;
 
 		// Warp params
-		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 105.0);
+		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 80.0);
 		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0.0);
 		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 320.0);
 		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0.0);
@@ -68,7 +68,6 @@ namespace WhiteLineDetection
 
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
-		map_frame = this->declare_parameter("map_frame", "map");
 
 		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
@@ -165,7 +164,7 @@ namespace WhiteLineDetection
 		sensor_msgs::msg::PointCloud2 pcl_msg;
 		std::vector<cv::Point> pixelCoordinates;
 
-		// The position of the camera is (0,0,height)
+		// The position of the camera is (0,0,height from base_footprint)
 		cv::Point3f ray_point;
 		tf2::Quaternion camera_rotation;
 
@@ -177,12 +176,11 @@ namespace WhiteLineDetection
 		}
 		catch (std::exception &e)
 		{
-			RCLCPP_ERROR(this->get_logger(), "map->camera transform failed with: %s", e.what());
+			RCLCPP_ERROR(this->get_logger(), "base_footprint->camera transform failed with: %s", e.what());
 			return; // Just early return if error
 		}
 
-		//Rotate the image by 90 degrees to fix an issue with placing points in the point cloud
-		//TODO: Figure out why this needs to be done cause it shouldnt need to be
+		// Rotate the image by 90 degrees to orient the image frame with the front of Ohm
 		cv::Point2f center((erodedImage.cols - 1) / 2.0, (erodedImage.rows - 1) / 2.0);
 		cv::Mat rotation_matix = getRotationMatrix2D(center, -90, 1.0);
 		cv::warpAffine(erodedImage, erodedImage, rotation_matix, erodedImage.size());
@@ -195,17 +193,15 @@ namespace WhiteLineDetection
 		{
 			if (i % nthPixel == 0)
 			{
-				auto ray_unrotated = raytracing::convertToOpenCvVec3(cameraModel.projectPixelTo3dRay(pixelCoordinates[i]));										 // Get ray out of camera, correcting for tilt and pan
-				auto ray = raytracing::convertTfToOpenCvVec3(tf2::quatRotate(camera_rotation.normalized(), tf2::Vector3{ray_unrotated.x, ray_unrotated.y, ray_unrotated.z})); // Rotate ray by trans map->camera
-				const auto normal = cv::Point3f{0.0, 0.0, 1.0};																									 // Assume flat plane
-				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};																							 // Assume 0,0,0 in plane
+				auto ray_unrotated = raytracing::convertToOpenCvVec3(cameraModel.projectPixelTo3dRay(pixelCoordinates[i]));													  // Get ray out of camera, correcting for tilt and pan
+				auto ray = raytracing::convertTfToOpenCvVec3(tf2::quatRotate(camera_rotation.normalized(), tf2::Vector3{ray_unrotated.x, ray_unrotated.y, ray_unrotated.z})); // Rotate ray by trans base_footprint->camera
+				const auto normal = cv::Point3f{0.0, 0.0, 1.0};																												  // Assume flat plane
+				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};																										  // Assume 0,0,0 in plane
 
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
 				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
 
-				//std::swap(new_point.x, new_point.y); // Camera x,y are opposite of right hand rule frame coords
-
-				//Flip all points over y axis cause their initially placed behind ohm for some reason
+				// Flip all points over y axis cause their initially placed behind ohm for some reason
 				new_point.x = -(new_point.x);
 
 				pointcl.points.push_back(new_point);
@@ -213,7 +209,7 @@ namespace WhiteLineDetection
 		}
 
 		pcl::toROSMsg(pointcl, pcl_msg);
-		pcl_msg.header.frame_id = "base_footprint"; // Because we use map_frame->camera_frame translation as our camera point
+		pcl_msg.header.frame_id = "base_footprint"; // Because we use base_footprint->camera_frame translation as our camera point, all points are relative to base_footprint
 		pcl_msg.header.stamp = this->now();
 
 		camera_cloud_publisher_->publish(pcl_msg);
@@ -268,9 +264,6 @@ namespace WhiteLineDetection
 	/// Returns the warped image matrix.
 	cv::Mat WhiteLineDetection::shiftPerspective(cv::Mat &inputImage) const
 	{
-		// auto msg = raytracing::matToString(transmtx); //Used in testing
-		// RCLCPP_INFO(this->get_logger(), "transform matrix: %s ", msg.c_str());
-
 		// The transformed image
 		auto transformed = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
 		cv::warpPerspective(inputImage, transformed, transmtx, transformed.size());
