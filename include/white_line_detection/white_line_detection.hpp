@@ -9,12 +9,8 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 
-#include <opencv2/core/ocl.hpp>
-#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
-#include <cv_bridge/rgb_colors.h>
-#include <image_transport/image_transport.hpp>
 #include "image_geometry/pinhole_camera_model.h"
 
 #include "tf2_ros/buffer.h"
@@ -28,10 +24,6 @@ namespace WhiteLineDetection
         explicit WhiteLineDetection(rclcpp::NodeOptions options);
         void setupOCL();
         void setupWarp();
-        void createGUI();
-
-        /// Enable the openCv visualization if set by the node param.
-        bool enableImShow;
 
     private:
         /// True when connected to the camera.
@@ -49,12 +41,12 @@ namespace WhiteLineDetection
         /// Warp pixel locations of the raw image.
         float tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
 
-        /// Ratio of width/heigth in the warped image. 1 would be square. 
+        /// Ratio of width/heigth in the warped image. 1 would be square.
         float ratio;
 
         /// The 3x3 perspective transform matrix. Should be treated as constant.
         cv::Mat transmtx;
-        /// The region of intrest.
+        /// The region of intrest. Crops to this area.
         cv::Rect ROI;
         /// Kernal used for white pixel filtering.
         cv::Mat erosionKernel;
@@ -62,12 +54,12 @@ namespace WhiteLineDetection
         /// Model used for raycasting from the camera to ground.
         image_geometry::PinholeCameraModel cameraModel;
 
-        //Tf stuff
+        // Tf stuff
         std::shared_ptr<tf2_ros::TransformListener> transform_listener{nullptr};
         std::unique_ptr<tf2_ros::Buffer> tf_buffer;
-        //Frame to grab camera info from
+        // Frame to grab camera info from
         std::string camera_frame;
-        
+
         /// The size of the erosion kernel.
         int kernelSize;
         /// The nth pixel to sample from the white pixels. Prevents spam to PCL2.
@@ -79,18 +71,9 @@ namespace WhiteLineDetection
 
         // Define other image pipeline functions
         void getPixelPointCloud(cv::Mat &erodedImage) const;
-        void display(cv::Mat &Uinput, cv::Mat &Uerosion) const;
         cv::Mat imageFiltering(cv::Mat &warpedImage) const;
         cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const;
         cv::Mat shiftPerspective(cv::Mat &inputImage) const;
-
-        // empty callback functions but it is the only way to increment the sliders
-        static void lowBlueTrackbar(int, void *) {}
-        static void highBlueTrackbar(int, void *) {}
-        static void lowGreenTrackbar(int, void *) {}
-        static void highGreenTrackbar(int, void *) {}
-        static void lowRedTrackbar(int, void *) {}
-        static void highRedTrackbar(int, void *) {}
 
         // Define subscriptions
         rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr raw_img_subscription_;
