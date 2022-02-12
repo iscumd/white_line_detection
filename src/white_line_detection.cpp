@@ -1,23 +1,10 @@
 #include "../include/white_line_detection/white_line_detection.hpp"
 #include "../include/white_line_detection/raytrace.hpp"
 
-#include <memory>
 #include <string>
-#include "sensor_msgs/msg/image.hpp"
-#include "std_msgs/msg/string.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
-#include "sensor_msgs/msg/point_cloud.hpp"
-#include "sensor_msgs/msg/camera_info.hpp"
-#include <opencv2/opencv.hpp>
 #include <opencv2/core/ocl.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <image_transport/image_transport.hpp>
-#include "cv_bridge/cv_bridge.h"
 #include <cv_bridge/rgb_colors.h>
-#include "cv_bridge/cv_bridge_export.h"
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_types.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace WhiteLineDetection
@@ -64,7 +51,6 @@ namespace WhiteLineDetection
 
 		kernelSize = this->declare_parameter("kernel_size", 5);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
-		enableImShow = this->declare_parameter("enable_imshow", false);
 
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
@@ -215,27 +201,6 @@ namespace WhiteLineDetection
 		camera_cloud_publisher_->publish(pcl_msg);
 	}
 
-	void WhiteLineDetection::createGUI()
-	{
-		cv::namedWindow("original", cv::WINDOW_AUTOSIZE);
-		cv::namedWindow("erosion", cv::WINDOW_AUTOSIZE);
-		cv::namedWindow("TRACKBARS", cv::WINDOW_AUTOSIZE);
-		//*****************GUI related *********************************
-		cv::createTrackbar("Low Blue", "TRACKBARS", &lowB, upperColor, lowBlueTrackbar);
-		cv::createTrackbar("Low Green", "TRACKBARS", &lowG, upperColor, lowGreenTrackbar);
-		cv::createTrackbar("Low Red", "TRACKBARS", &lowR, upperColor, lowRedTrackbar);
-		cv::createTrackbar("High Blue", "TRACKBARS", &highB, upperColor, highBlueTrackbar);
-		cv::createTrackbar("High Green", "TRACKBARS", &highG, upperColor, highGreenTrackbar);
-		cv::createTrackbar("High Red", "TRACKBARS", &highR, upperColor, highRedTrackbar);
-	}
-
-	/// Updates the displayed guis with the last processed image.
-	void WhiteLineDetection::display(cv::Mat &Uinput, cv::Mat &Uerosion) const
-	{
-		cv::imshow("original", Uinput);
-		cv::imshow("erosion", Uerosion);
-	}
-
 	/// Converts a raw image to an openCv matrix. This function should decode the image properly automatically.
 	///
 	/// Returns the cv matrix form of the image.
@@ -301,10 +266,6 @@ namespace WhiteLineDetection
 
 			// Convert pixels to pointcloud and publish
 			getPixelPointCloud(filteredImg);
-
-			// Display to gui if enabled.
-			if (enableImShow)
-				display(cvImg, filteredImg);
 		}
 	}
 
@@ -334,12 +295,6 @@ int main(int argc, char *argv[])
 	exec.add_node(white_line_detection);
 
 	// white_line_detection->setupOCL(); TODO make sure this is doing something then re-enable
-
-	// Only enable gui if set as it crashes otherwise
-	if (white_line_detection->enableImShow)
-	{
-		white_line_detection->createGUI();
-	}
 
 	exec.spin();
 	rclcpp::shutdown();
