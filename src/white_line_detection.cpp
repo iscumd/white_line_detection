@@ -9,7 +9,7 @@
 
 namespace WhiteLineDetection
 {
-	WhiteLineDetection::WhiteLineDetection(rclcpp::NodeOptions options)
+	WhiteLineDetection::WhiteLineDetection(const rclcpp::NodeOptions& options)
 		: Node("white_line_detection", options)
 	{
 		// Define topic subscriptions and publishers
@@ -95,7 +95,7 @@ namespace WhiteLineDetection
 		std::cout << "************************" << std::endl;
 		for (size_t i = 0; i < context.ndevices(); i++)
 		{
-			cv::ocl::Device device = context.device(i);
+			const cv::ocl::Device& device = context.device(i);
 			std::cout << "name: " << device.name() << std::endl;
 			std::cout << "available: " << device.available() << std::endl;
 			std::cout << "img support: " << device.imageSupport() << std::endl;
@@ -204,7 +204,7 @@ namespace WhiteLineDetection
 	/// Converts a raw image to an openCv matrix. This function should decode the image properly automatically.
 	///
 	/// Returns the cv matrix form of the image.
-	cv::Mat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const
+	cv::Mat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg)
 	{
 		auto cvImage = cv_bridge::toCvCopy(imageMsg, "mono8"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
 		return cvImage->image;
