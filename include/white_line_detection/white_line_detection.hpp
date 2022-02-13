@@ -21,7 +21,7 @@ namespace WhiteLineDetection
     class WhiteLineDetection : public rclcpp::Node
     {
     public:
-        explicit WhiteLineDetection(rclcpp::NodeOptions options);
+        explicit WhiteLineDetection(const rclcpp::NodeOptions& options);
         void setupOCL();
         void setupWarp();
 
@@ -72,7 +72,7 @@ namespace WhiteLineDetection
         // Define other image pipeline functions
         void getPixelPointCloud(cv::Mat &erodedImage) const;
         cv::Mat imageFiltering(cv::Mat &warpedImage) const;
-        cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) const;
+        static cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) ;
         cv::Mat shiftPerspective(cv::Mat &inputImage) const;
 
         // Define subscriptions
