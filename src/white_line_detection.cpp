@@ -29,7 +29,7 @@ namespace WhiteLineDetection
 
 		// Define Parameters
 
-		lowColor = this->declare_parameter("lower_bound_white", 160);
+		lowColor = this->declare_parameter("lower_bound_white", 240);
 		lowB = lowColor;
 		lowG = lowColor;
 		lowR = lowColor;
