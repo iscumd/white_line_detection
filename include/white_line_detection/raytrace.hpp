@@ -10,7 +10,7 @@ namespace raytracing
 {
 
     // Formats matrix to string in R formatting.
-    auto matToString(const cv::Mat &mat) noexcept -> std::string
+    inline auto matToString(const cv::Mat &mat) noexcept -> std::string
     {
         std::stringstream ss;
         ss << mat;
@@ -43,7 +43,8 @@ namespace raytracing
         return cv;
     }
 
-    // Define some private generic vector ops
+    // Define some private generic vector ops. Something about these is implimented wrong, bc the lines get warped when I replace them with the opencv equivelent.
+    // But that makes it work so... 
     namespace impl_
     {
         /// Dot product
