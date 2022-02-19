@@ -38,7 +38,7 @@ namespace WhiteLineDetection
 		highR = upperColor;
 
 		// Warp params
-		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 80.0);
+		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0);
 		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0.0);
 		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 320.0);
 		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0.0);
@@ -49,11 +49,12 @@ namespace WhiteLineDetection
 
 		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
 
-		kernelSize = this->declare_parameter("kernel_size", 5);
+		kernelSize = this->declare_parameter("kernel_size", 2);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
 
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
+		base_frame = this->declare_parameter("base_frame", "base_footprint");
 
 		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
@@ -117,7 +118,7 @@ namespace WhiteLineDetection
 		cv::Point Q4 = cv::Point2f(bl_x, bl_y); // bottom left
 
 		// Take the Pythagorean theorem of the right side (which may be a triangle) to find the height of the final image (equal to that triangles hypotanuse).
-		float recth = sqrt((Q3.x - Q2.x) * (Q3.x - Q2.x) + (Q3.y - Q2.y) * (Q3.y - Q2.y));
+		float recth = std::hypotf((Q3.x - Q2.x), (Q3.y - Q2.y));
 		// Apply image ratio based off above height.
 		float rectw = ratio * recth;
 
@@ -156,7 +157,7 @@ namespace WhiteLineDetection
 
 		try
 		{
-			auto trans = tf_buffer->lookupTransform("base_footprint", camera_frame, tf2::TimePointZero);
+			auto trans = tf_buffer->lookupTransform(base_frame, camera_frame, tf2::TimePointZero);
 			tf2::convert(trans.transform.rotation, camera_rotation);
 			ray_point = cv::Vec3f{0, 0, (float)trans.transform.translation.z};
 		}
@@ -185,7 +186,7 @@ namespace WhiteLineDetection
 				const auto plane_point = cv::Point3f{0.0, 0.0, 0.0};																										  // Assume 0,0,0 in plane
 
 				// Find the point where the ray intersects the ground ie. the point where the pixel maps to in the map.
-				pcl::PointXYZ new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
+				auto new_point = raytracing::intersectLineAndPlane(ray, ray_point, normal, plane_point);
 
 				// Flip all points over y axis cause their initially placed behind ohm for some reason
 				new_point.x = -(new_point.x);
@@ -195,7 +196,7 @@ namespace WhiteLineDetection
 		}
 
 		pcl::toROSMsg(pointcl, pcl_msg);
-		pcl_msg.header.frame_id = "base_footprint"; // Because we use base_footprint->camera_frame translation as our camera point, all points are relative to base_footprint
+		pcl_msg.header.frame_id = base_frame; // Because we use base_footprint->camera_frame translation as our camera point, all points are relative to base_footprint
 		pcl_msg.header.stamp = this->now();
 
 		camera_cloud_publisher_->publish(pcl_msg);
@@ -294,7 +295,7 @@ int main(int argc, char *argv[])
 	auto white_line_detection = std::make_shared<WhiteLineDetection::WhiteLineDetection>(options);
 	exec.add_node(white_line_detection);
 
-	// white_line_detection->setupOCL(); TODO make sure this is doing something then re-enable
+	white_line_detection->setupOCL();
 
 	exec.spin();
 	rclcpp::shutdown();

@@ -59,6 +59,8 @@ namespace WhiteLineDetection
         std::unique_ptr<tf2_ros::Buffer> tf_buffer;
         // Frame to grab camera info from
         std::string camera_frame;
+        // Base frame
+        std::string base_frame;
 
         /// The size of the erosion kernel.
         int kernelSize;
