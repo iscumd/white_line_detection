@@ -37,18 +37,6 @@ namespace WhiteLineDetection
 		highG = upperColor;
 		highR = upperColor;
 
-		// Warp params
-		tl_x = this->declare_parameter("pixel_coordinates_tl_x", 0);
-		tl_y = this->declare_parameter("pixel_coordinates_tl_y", 0.0);
-		tr_x = this->declare_parameter("pixel_coordinates_tr_x", 320.0);
-		tr_y = this->declare_parameter("pixel_coordinates_tr_y", 0.0);
-		bl_x = this->declare_parameter("pixel_coordinates_bl_x", 0.0);
-		bl_y = this->declare_parameter("pixel_coordinates_bl_y", 240.0);
-		br_x = this->declare_parameter("pixel_coordinates_br_x", 320.0);
-		br_y = this->declare_parameter("pixel_coordinates_br_y", 240.0);
-
-		ratio = this->declare_parameter("pixel_coordinates_ratio", 1.0);
-
 		kernelSize = this->declare_parameter("kernel_size", 2);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
 
@@ -61,9 +49,6 @@ namespace WhiteLineDetection
 
 		// Define CV variables
 		erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
-
-		// Create warp matrix.
-		setupWarp();
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
@@ -106,39 +91,6 @@ namespace WhiteLineDetection
 
 		cv::ocl::Device d = cv::ocl::Device::getDefault();
 		std::cout << d.OpenCLVersion() << std::endl;
-	}
-
-	/// Sets up the constant perspective transform matrix as defined by node params.
-	void WhiteLineDetection::setupWarp()
-	{
-		// Points in the raw image to make rect
-		cv::Point Q1 = cv::Point2f(tl_x, tl_y); // top left pixel coordinate
-		cv::Point Q2 = cv::Point2f(tr_x, tr_y); // top right
-		cv::Point Q3 = cv::Point2f(br_x, br_y); // bottom right
-		cv::Point Q4 = cv::Point2f(bl_x, bl_y); // bottom left
-
-		// Take the Pythagorean theorem of the right side (which may be a triangle) to find the height of the final image (equal to that triangles hypotanuse).
-		float recth = std::hypotf((Q3.x - Q2.x), (Q3.y - Q2.y));
-		// Apply image ratio based off above height.
-		float rectw = ratio * recth;
-
-		// Create a rectangle with top left corner in the top left coord of the source image, and with width and height calced above.
-		cv::Rect R(Q1.x, Q1.y, rectw, recth);
-
-		// The destination coordinates in the warped image.
-		cv::Point R1 = cv::Point2f(R.x, R.y);					   // Top left doesn't change
-		cv::Point R2 = cv::Point2f(R.x + R.width, R.y);			   // Top right y doesn't change and x is stretched to width.
-		cv::Point R3 = cv::Point2f(R.x + R.width, R.y + R.height); // Bottom right stretches to width and moves y down to new height.
-		cv::Point R4 = cv::Point2f(R.x, R.y + R.height);		   // Bottom left keeps the same x and moves y down to new height.
-
-		std::vector<cv::Point2f> squarePts{R1, R2, R3, R4};
-		std::vector<cv::Point2f> quadPts{Q1, Q2, Q3, Q4};
-
-		// Copy transform to constant feild
-		auto transmtx_double = cv::getPerspectiveTransform(quadPts, squarePts);
-
-		// Explicitly convert to floats, will be double and fail an assert otherwise
-		transmtx_double.convertTo(transmtx, CV_32FC1);
 	}
 
 	/// Converts the white pixel matrix into a pointcloud, then publishes the pointclouds.
@@ -228,18 +180,6 @@ namespace WhiteLineDetection
 		return erodedImage;
 	}
 
-	/// Applies the perspective warp to the image.
-	///
-	/// Returns the warped image matrix.
-	cv::Mat WhiteLineDetection::shiftPerspective(cv::Mat &inputImage) const
-	{
-		// The transformed image
-		auto transformed = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
-		cv::warpPerspective(inputImage, transformed, transmtx, transformed.size());
-
-		return transformed;
-	}
-
 	/// Callback passed to the image topic subscription. This produces a pointcloud for every
 	/// image sent on the topic.
 	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -252,9 +192,6 @@ namespace WhiteLineDetection
 		{
 			// Decode image
 			auto cvImg = ptgrey2CVMat(msg);
-
-			// Correct for angle
-			//auto warped = shiftPerspective(cvImg); TODO fully remove this
 
 			// Filter non-white pixels out
 			auto filteredImg = imageFiltering(cvImg);
@@ -280,7 +217,6 @@ namespace WhiteLineDetection
 		{
 			HEIGHT = msg->height;
 			WIDTH = msg->width;
-			//ROI = cv::Rect(12, 12, WIDTH - 20, HEIGHT - 20);
 			cameraModel.fromCameraInfo(*msg); // Calibrate camera model
 
 			RCLCPP_INFO(this->get_logger(), "Connected to camera");
