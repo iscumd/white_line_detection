@@ -23,7 +23,6 @@ namespace WhiteLineDetection
     public:
         explicit WhiteLineDetection(const rclcpp::NodeOptions& options);
         void setupOCL();
-        void setupWarp();
 
     private:
         /// True when connected to the camera.
@@ -46,8 +45,6 @@ namespace WhiteLineDetection
 
         /// The 3x3 perspective transform matrix. Should be treated as constant.
         cv::Mat transmtx;
-        /// The region of intrest. Crops to this area.
-        //cv::Rect ROI;
         /// Kernal used for white pixel filtering.
         cv::Mat erosionKernel;
 
@@ -75,7 +72,6 @@ namespace WhiteLineDetection
         void getPixelPointCloud(cv::Mat &erodedImage) const;
         cv::Mat imageFiltering(cv::Mat &warpedImage) const;
         static cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) ;
-        cv::Mat shiftPerspective(cv::Mat &inputImage) const;
 
         // Define subscriptions
         rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr raw_img_subscription_;
