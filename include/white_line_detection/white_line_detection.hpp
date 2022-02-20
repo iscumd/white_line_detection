@@ -47,7 +47,7 @@ namespace WhiteLineDetection
         /// The 3x3 perspective transform matrix. Should be treated as constant.
         cv::Mat transmtx;
         /// The region of intrest. Crops to this area.
-        cv::Rect ROI;
+        //cv::Rect ROI;
         /// Kernal used for white pixel filtering.
         cv::Mat erosionKernel;
 

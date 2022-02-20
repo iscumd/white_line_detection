@@ -191,6 +191,9 @@ namespace WhiteLineDetection
 				// Flip all points over y axis cause their initially placed behind ohm for some reason
 				new_point.x = -(new_point.x);
 
+				// Moves the line in the air, which causes pcl-ls to actually accept it.
+				new_point.z += 5;
+
 				pointcl.points.push_back(new_point);
 			}
 		}
@@ -234,7 +237,7 @@ namespace WhiteLineDetection
 		auto transformed = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
 		cv::warpPerspective(inputImage, transformed, transmtx, transformed.size());
 
-		return transformed(ROI); // Contrain to region
+		return transformed;
 	}
 
 	/// Callback passed to the image topic subscription. This produces a pointcloud for every
@@ -251,10 +254,10 @@ namespace WhiteLineDetection
 			auto cvImg = ptgrey2CVMat(msg);
 
 			// Correct for angle
-			auto warped = shiftPerspective(cvImg);
+			//auto warped = shiftPerspective(cvImg); TODO fully remove this
 
 			// Filter non-white pixels out
-			auto filteredImg = imageFiltering(warped);
+			auto filteredImg = imageFiltering(cvImg);
 
 			// TODO remove later, outputs an image as a topic
 			auto hdr = std_msgs::msg::Header{};
@@ -277,7 +280,7 @@ namespace WhiteLineDetection
 		{
 			HEIGHT = msg->height;
 			WIDTH = msg->width;
-			ROI = cv::Rect(12, 12, WIDTH - 20, HEIGHT - 20);
+			//ROI = cv::Rect(12, 12, WIDTH - 20, HEIGHT - 20);
 			cameraModel.fromCameraInfo(*msg); // Calibrate camera model
 
 			RCLCPP_INFO(this->get_logger(), "Connected to camera");
