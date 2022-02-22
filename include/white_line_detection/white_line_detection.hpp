@@ -71,7 +71,7 @@ namespace WhiteLineDetection
         // Define publishers
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr camera_cloud_publisher_;
 
-        // TODO remove test topic that publishes the filtered images
+        // Test topic that shows the modified image in rviz
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr img_test_;
     };
 }

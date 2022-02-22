@@ -1,0 +1,50 @@
+package_name = "White Line Detection"
+repo = "https://github.com/iscumd/white_line_detection/tree/main"
+
+[[nodes]]
+node_name = 'white_line_detection'
+#Relitive to this file
+source_file = ['./src/white_line_detection.cpp']
+summary = '''
+Generic white line detection node. Converts any white lines detected in an image message to pointclouds relitive to the camera.
+This node should function with any rectiliniar monocular camera, which has a frame relitive to base set in tf somehow.
+'''
+potential_improvements = 'Add dynamic thresholding. Use ML to detect the white lines, allowing us to use this in any weather condition.'
+
+misc = 'This node is primarally useful in controlled enviornments where the lighting is relitivly static. It currently has issues otherwise.'
+
+[[nodes.publishes]]
+name = '/camera/camera_points'
+description = 'The points from the white line detection. These will be in the base_frame as set by param.'
+
+[[nodes.publishes]]
+name = '/camera/test_img'
+description = 'Image topic publishing the final transformed image before being passed to line detection. Used for debugging in liew of imshow.'
+
+[[nodes.subscribes]]
+name = '/camera/image_raw'
+description = 'The raw image from the camera node/gazebo to be processed.'
+
+[[nodes.subscribes]]
+name = '/camera/camera_info'
+description = 'The standard camera info topic, used to find things like resolution. Must be from the same camera that outputs the image topic.'
+
+[[nodes.params]]
+name = 'lower_bound_white'
+description = 'The lower threshold value for what is considered white.'
+
+[[nodes.params]]
+name = 'kernel_size'
+description = 'The size of the erosion kernal used for threasholding. Larger values remove more white.'
+
+[[nodes.params]]
+name = 'sample_nth_pixel'
+description = 'How many pixels to sample from the white lines to be used in the pointcloud.'
+
+[[nodes.params]]
+name = 'camera_frame'
+description = 'The frame the camera is in. Default: "camera_link"'
+
+[[nodes.params]]
+name = 'base_frame'
+description = 'The base frame the camera_frame will be relitive to. Default: "base_footprint"'

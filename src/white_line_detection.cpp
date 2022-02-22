@@ -197,9 +197,9 @@ namespace WhiteLineDetection
 			// Filter non-white pixels out
 			auto filteredImg = imageFiltering(cvImg);
 
-			// TODO remove later, outputs an image as a topic
+			// Outputs an image as a topic for testing
 			auto hdr = std_msgs::msg::Header{};
-			hdr.frame_id = "camera_link";
+			hdr.frame_id = camera_frame;
 			hdr.stamp = this->get_clock()->now();
 			auto out = cv_bridge::CvImage{hdr, "mono8", filteredImg.getMat(cv::ACCESS_READ)};
 			auto img = sensor_msgs::msg::Image{};
