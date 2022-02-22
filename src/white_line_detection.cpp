@@ -145,7 +145,7 @@ namespace WhiteLineDetection
 				new_point.x = -(new_point.x);
 
 				// Moves the line in the air, which causes pcl-ls to actually accept it.
-				new_point.z += 5;
+				new_point.z += 1;
 
 				pointcl.points.push_back(new_point);
 			}
