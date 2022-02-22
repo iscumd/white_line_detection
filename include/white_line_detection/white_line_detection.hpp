@@ -1,5 +1,4 @@
-#ifndef WHITE_LINE_DETECTION__WHITE_LINE_DETECTION_HPP_
-#define WHITE_LINE_DETECTION__WHITE_LINE_DETECTION_HPP_
+#pragma once
 
 #include <memory>
 #include <mutex>
@@ -37,16 +36,10 @@ namespace WhiteLineDetection
         int highB, highG, highR;
         int lowB, lowG, lowR;
 
-        /// Warp pixel locations of the raw image.
-        float tl_x, tl_y, tr_x, tr_y, bl_x, bl_y, br_x, br_y;
-
-        /// Ratio of width/heigth in the warped image. 1 would be square.
-        float ratio;
-
-        /// The 3x3 perspective transform matrix. Should be treated as constant.
-        cv::Mat transmtx;
         /// Kernal used for white pixel filtering.
         cv::Mat erosionKernel;
+        /// The size of the erosion kernel.
+        int kernelSize;
 
         /// Model used for raycasting from the camera to ground.
         image_geometry::PinholeCameraModel cameraModel;
@@ -59,8 +52,6 @@ namespace WhiteLineDetection
         // Base frame
         std::string base_frame;
 
-        /// The size of the erosion kernel.
-        int kernelSize;
         /// The nth pixel to sample from the white pixels. Prevents spam to PCL2.
         int nthPixel;
 
@@ -69,9 +60,9 @@ namespace WhiteLineDetection
         void cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
         // Define other image pipeline functions
-        void getPixelPointCloud(cv::Mat &erodedImage) const;
-        cv::Mat imageFiltering(cv::Mat &warpedImage) const;
-        static cv::Mat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) ;
+        void getPixelPointCloud(cv::UMat &erodedImage) const;
+        cv::UMat imageFiltering(cv::UMat &warpedImage) const;
+        static cv::UMat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) ;
 
         // Define subscriptions
         rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr raw_img_subscription_;
@@ -84,5 +75,3 @@ namespace WhiteLineDetection
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr img_test_;
     };
 }
-
-#endif
