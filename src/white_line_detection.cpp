@@ -1,6 +1,7 @@
 #include "../include/white_line_detection/white_line_detection.hpp"
 #include "../include/white_line_detection/raytrace.hpp"
 
+#include <opencv2/core/mat.hpp>
 #include <string>
 #include <opencv2/core/ocl.hpp>
 #include <cv_bridge/rgb_colors.h>
@@ -97,7 +98,7 @@ namespace WhiteLineDetection
 	///
 	/// This function works by intersecting the ground plane with a ray cast from each white pixel location, and converting that point to a PCL.
 	/// This pointcloud is then broadcast, allowing the nav stack to see the white lines as obsticles.
-	void WhiteLineDetection::getPixelPointCloud(cv::Mat &erodedImage) const
+	void WhiteLineDetection::getPixelPointCloud(cv::UMat &erodedImage) const
 	{
 		pcl::PointCloud<pcl::PointXYZ> pointcl;
 		sensor_msgs::msg::PointCloud2 pcl_msg;
@@ -160,19 +161,19 @@ namespace WhiteLineDetection
 	/// Converts a raw image to an openCv matrix. This function should decode the image properly automatically.
 	///
 	/// Returns the cv matrix form of the image.
-	cv::Mat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg)
+	cv::UMat WhiteLineDetection::ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg)
 	{
 		auto cvImage = cv_bridge::toCvCopy(imageMsg, "mono8"); // This should decode correctly, but we may need to deal with bayer filters depending on the driver.
-		return cvImage->image;
+		return cvImage->image.getUMat(cv::ACCESS_RW);
 	}
 
 	/// Filters non-white pixels out of the warped image.
 	///
 	/// Returns the eroded image matrix. The only pixels left should be white.
-	cv::Mat WhiteLineDetection::imageFiltering(cv::Mat &warpedImage) const
+	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage) const
 	{
-		auto binaryImage = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
-		auto erodedImage = cv::Mat(HEIGHT, WIDTH, CV_8UC1);
+		auto binaryImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
+		auto erodedImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
 
 		cv::inRange(warpedImage, cv::Scalar(lowB, lowG, lowR), cv::Scalar(highB, highG, highR), binaryImage);
 		cv::erode(binaryImage, erodedImage, erosionKernel);
@@ -200,7 +201,7 @@ namespace WhiteLineDetection
 			auto hdr = std_msgs::msg::Header{};
 			hdr.frame_id = "camera_link";
 			hdr.stamp = this->get_clock()->now();
-			auto out = cv_bridge::CvImage{hdr, "mono8", filteredImg};
+			auto out = cv_bridge::CvImage{hdr, "mono8", filteredImg.getMat(cv::ACCESS_READ)};
 			auto img = sensor_msgs::msg::Image{};
 			out.toImageMsg(img);
 			this->img_test_->publish(img);
