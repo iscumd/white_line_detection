@@ -36,11 +36,6 @@ namespace WhiteLineDetection
         int highB, highG, highR;
         int lowB, lowG, lowR;
 
-        /// Kernal used for white pixel filtering.
-        cv::Mat erosionKernel;
-        /// The size of the erosion kernel.
-        int kernelSize;
-
         /// Model used for raycasting from the camera to ground.
         image_geometry::PinholeCameraModel cameraModel;
 

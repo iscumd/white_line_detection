@@ -34,10 +34,6 @@ name = 'lower_bound_white'
 description = 'The lower threshold value for what is considered white.'
 
 [[nodes.params]]
-name = 'kernel_size'
-description = 'The size of the erosion kernal used for threasholding. Larger values remove more white.'
-
-[[nodes.params]]
 name = 'sample_nth_pixel'
 description = 'How many pixels to sample from the white lines to be used in the pointcloud.'
 

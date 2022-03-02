@@ -2,6 +2,7 @@
 #include "../include/white_line_detection/raytrace.hpp"
 
 #include <opencv2/core/mat.hpp>
+#include <opencv2/imgproc.hpp>
 #include <string>
 #include <opencv2/core/ocl.hpp>
 #include <cv_bridge/rgb_colors.h>
@@ -38,7 +39,6 @@ namespace WhiteLineDetection
 		highG = upperColor;
 		highR = upperColor;
 
-		kernelSize = this->declare_parameter("kernel_size", 2);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
 
 		// Tf stuff
@@ -47,9 +47,6 @@ namespace WhiteLineDetection
 
 		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
-
-		// Define CV variables
-		erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
@@ -178,18 +175,13 @@ namespace WhiteLineDetection
 		return cvImage->image.getUMat(cv::ACCESS_RW);
 	}
 
-	/// Filters non-white pixels out of the warped image.
-	///
-	/// Returns the eroded image matrix. The only pixels left should be white.
-	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage) const
+	/// Thresholds the image into binary black and white, with a lower bound on white.
+	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &in) const
 	{
 		auto binaryImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
-		auto erodedImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
+		cv::threshold(in, binaryImage, lowColor, upperColor, cv::THRESH_BINARY);
 
-		cv::inRange(warpedImage, cv::Scalar(lowB, lowG, lowR), cv::Scalar(highB, highG, highR), binaryImage);
-		cv::erode(binaryImage, erodedImage, erosionKernel);
-
-		return erodedImage;
+		return binaryImage;
 	}
 
 	/// Callback passed to the image topic subscription. This produces a pointcloud for every
