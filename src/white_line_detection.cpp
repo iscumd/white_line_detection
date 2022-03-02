@@ -128,6 +128,17 @@ namespace WhiteLineDetection
 		// Remove all non white pixels
 		cv::findNonZero(erodedImage, pixelCoordinates);
 
+
+		// If no white lines detected, publish empty cloud so the pointcloud concat sync will still work
+		if (pixelCoordinates.size() == 0) {
+			pointcl.push_back(pcl::PointXYZ{});
+			pcl::toROSMsg(pointcl, pcl_msg);
+			pcl_msg.header.frame_id = base_frame;
+			pcl_msg.header.stamp = this->now();
+			camera_cloud_publisher_->publish(pcl_msg);
+			return;
+		}
+
 		// Iter through all the white pixels, adding their locations to pointclouds by 'raytracing' their location on the map from the camera.
 		for (size_t i = 0; i < pixelCoordinates.size(); i++)
 		{
