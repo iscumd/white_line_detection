@@ -34,12 +34,6 @@ namespace WhiteLineDetection
         /// Camera resolution as retrived from the camera_info topic.
         int HEIGHT{}, WIDTH{};
 
-        /// The lower and upper bound for what we define 'white' as.
-        int upperColor{255};
-        int lowColor;
-        int highB, highG, highR;
-        int lowB, lowG, lowR;
-
         /// Model used for raycasting from the camera to ground.
         image_geometry::PinholeCameraModel cameraModel;
 

@@ -2,6 +2,7 @@
 #include "../include/white_line_detection/raytrace.hpp"
 #include "white_line_detection/frontend.hpp"
 
+#include <cassert>
 #include <memory>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
@@ -33,13 +34,7 @@ namespace WhiteLineDetection
 
 		// Define Parameters
 
-		lowColor = this->declare_parameter("lower_bound_white", 240); //TODO we may be able to make these local now
-		lowB = lowColor;
-		lowG = lowColor;
-		lowR = lowColor;
-		highB = upperColor;
-		highG = upperColor;
-		highR = upperColor;
+		auto lowColor = this->declare_parameter("lower_bound_white", 240);
 
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
 
@@ -136,7 +131,6 @@ namespace WhiteLineDetection
 
 		// Remove all non white pixels
 		cv::findNonZero(erodedImage, pixelCoordinates);
-
 
 		// If no white lines detected, publish empty cloud so the pointcloud concat sync will still work
 		if (pixelCoordinates.size() == 0) {
