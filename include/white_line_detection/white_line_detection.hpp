@@ -14,6 +14,7 @@
 
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
+#include "white_line_detection/frontend.hpp"
 
 namespace WhiteLineDetection
 {
@@ -24,6 +25,9 @@ namespace WhiteLineDetection
         void setupOCL();
 
     private:
+        /// The abstract thresholder used in the frontend.
+        std::shared_ptr<Thresholder> thresholder;
+
         /// True when connected to the camera.
         bool connected{false};
 
@@ -56,7 +60,6 @@ namespace WhiteLineDetection
 
         // Define other image pipeline functions
         void getPixelPointCloud(cv::UMat &erodedImage) const;
-        cv::UMat imageFiltering(cv::UMat &warpedImage) const;
         static cv::UMat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) ;
 
         // Define subscriptions

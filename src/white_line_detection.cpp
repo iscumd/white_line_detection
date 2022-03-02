@@ -1,6 +1,8 @@
 #include "../include/white_line_detection/white_line_detection.hpp"
 #include "../include/white_line_detection/raytrace.hpp"
+#include "white_line_detection/frontend.hpp"
 
+#include <memory>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
 #include <string>
@@ -47,6 +49,11 @@ namespace WhiteLineDetection
 
 		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
+
+		// Frontend
+		auto thresh_str = this->declare_parameter("thresholder", "basic");
+
+		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
@@ -175,15 +182,6 @@ namespace WhiteLineDetection
 		return cvImage->image.getUMat(cv::ACCESS_RW);
 	}
 
-	/// Thresholds the image into binary black and white, with a lower bound on white.
-	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &in) const
-	{
-		auto binaryImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
-		cv::threshold(in, binaryImage, lowColor, upperColor, cv::THRESH_BINARY);
-
-		return binaryImage;
-	}
-
 	/// Callback passed to the image topic subscription. This produces a pointcloud for every
 	/// image sent on the topic.
 	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -198,7 +196,8 @@ namespace WhiteLineDetection
 			auto cvImg = ptgrey2CVMat(msg);
 
 			// Filter non-white pixels out
-			auto filteredImg = imageFiltering(cvImg);
+			auto filteredImg = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
+			thresholder->threshold(cvImg, filteredImg);
 
 			// Outputs an image as a topic for testing
 			auto hdr = std_msgs::msg::Header{};
