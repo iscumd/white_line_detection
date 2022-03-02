@@ -44,3 +44,17 @@ class BasicThresholder : public Thresholder {
     private:
         int lowerBoundWhite;
 };
+
+
+/**
+ * @brief Thresholder that performs otsu's method.
+ * This thresholder chooses a threshold value itself.
+ */
+class OtsuThresholder : public Thresholder {
+    public:
+    virtual ~OtsuThresholder() = default;
+
+    virtual void threshold(cv::UMat &in, cv::UMat &out) const override {
+        cv::threshold(in, out, 1337, 255, cv::THRESH_BINARY + cv::THRESH_OTSU);
+    }
+};

@@ -51,9 +51,10 @@ namespace WhiteLineDetection
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
 		// Frontend
-		auto thresh_str = this->declare_parameter("thresholder", "basic");
+		auto thresh_str = this->declare_parameter("thresholder", "otsu"); //TODO document this
 
 		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
+		else if (thresh_str == "otsu") thresholder = std::make_shared<OtsuThresholder>();
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
