@@ -23,7 +23,7 @@ class Thresholder {
      * @param out The output image matrix to be written to.
      */
     virtual void threshold(cv::UMat &in, cv::UMat &out) const = 0;
-    virtual ~Thresholder() {};
+    virtual ~Thresholder() = default;
 };
 
 
@@ -35,7 +35,7 @@ class Thresholder {
 class BasicThresholder : public Thresholder {
     public:
     explicit BasicThresholder(int lowerBoundWhite) : lowerBoundWhite(lowerBoundWhite) {};
-    virtual ~BasicThresholder() {};
+    virtual ~BasicThresholder() = default;
 
     virtual void threshold(cv::UMat &in, cv::UMat &out) const override {
         cv::threshold(in, out, lowerBoundWhite, 255, cv::THRESH_BINARY);
@@ -43,6 +43,28 @@ class BasicThresholder : public Thresholder {
 
     private:
         int lowerBoundWhite;
+};
+
+/**
+ * @brief Thresholder that performs an adaptive threshold.
+ */
+class AdaptiveThresholder : public Thresholder {
+    public:
+    explicit AdaptiveThresholder(int subConst, int blockSize, cv::AdaptiveThresholdTypes adaptiveKind) 
+    : subConst(subConst), blockSize(blockSize), adaptiveKind(adaptiveKind) {};
+    virtual ~AdaptiveThresholder() = default;
+
+    virtual void threshold(cv::UMat &in, cv::UMat &out) const override {
+        cv::adaptiveThreshold(in, out, 255, adaptiveKind, cv::THRESH_BINARY, blockSize, subConst);
+    }
+
+    private:
+        /// A constant subtracted from the sum of an area to get the threshold bound.
+        int subConst;
+        /// The size of the region to sample for each sum.
+        int blockSize;
+        /// The cv enum of cv.ADAPTIVE_THRESH_MEAN_C or cv.ADAPTIVE_THRESH_GAUSSIAN_C
+        cv::AdaptiveThresholdTypes adaptiveKind;
 };
 
 

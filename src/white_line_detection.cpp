@@ -33,7 +33,7 @@ namespace WhiteLineDetection
 
 		// Define Parameters
 
-		lowColor = this->declare_parameter("lower_bound_white", 240);
+		lowColor = this->declare_parameter("lower_bound_white", 240); //TODO we may be able to make these local now
 		lowB = lowColor;
 		lowG = lowColor;
 		lowR = lowColor;
@@ -51,10 +51,14 @@ namespace WhiteLineDetection
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
 		// Frontend
-		auto thresh_str = this->declare_parameter("thresholder", "otsu"); //TODO document this
+		auto thresh_str = this->declare_parameter("thresholder", "mean"); //TODO document this
+        int subConst = this->declare_parameter("adaptive_constant", 2);
+        int blockSize = this->declare_parameter("adaptive_blocksize", 11);
 
 		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
 		else if (thresh_str == "otsu") thresholder = std::make_shared<OtsuThresholder>();
+		else if (thresh_str == "mean") thresholder = std::make_shared<AdaptiveThresholder>(subConst, blockSize, cv::ADAPTIVE_THRESH_MEAN_C);
+		else if (thresh_str == "gaussian") thresholder = std::make_shared<AdaptiveThresholder>(subConst, blockSize, cv::ADAPTIVE_THRESH_GAUSSIAN_C);
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
