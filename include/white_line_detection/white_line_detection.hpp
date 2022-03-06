@@ -48,6 +48,9 @@ namespace WhiteLineDetection
         /// The nth pixel to sample from the white pixels. Prevents spam to PCL2.
         int nthPixel;
 
+        /// Only displays the test image without points if set.
+        bool debugOnly;
+
         // Define raw image callback and camera info callback
         void raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg);
         void cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);

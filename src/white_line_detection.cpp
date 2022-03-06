@@ -33,10 +33,11 @@ namespace WhiteLineDetection
 			"/camera/test_img", rclcpp::SensorDataQoS());
 
 		// Define Parameters
-
 		auto lowColor = this->declare_parameter("lower_bound_white", 240);
 
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
+
+		debugOnly = this->declare_parameter("debug_only", false);
 
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
@@ -46,7 +47,7 @@ namespace WhiteLineDetection
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
 		// Frontend
-		auto thresh_str = this->declare_parameter("thresholder", "mean"); //TODO document this
+		auto thresh_str = this->declare_parameter("thresholder", "basic"); //TODO document this
         int subConst = this->declare_parameter("adaptive_constant", 2);
         int blockSize = this->declare_parameter("adaptive_blocksize", 11);
 
@@ -208,7 +209,9 @@ namespace WhiteLineDetection
 			this->img_test_->publish(img);
 
 			// Convert pixels to pointcloud and publish
-			getPixelPointCloud(filteredImg);
+			if (!debugOnly) {
+				getPixelPointCloud(filteredImg);
+			}
 		}
 	}
 
