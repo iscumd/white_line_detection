@@ -47,6 +47,10 @@ target_include_directories(white_line_detection PUBLIC
 
 install(TARGETS white_line_detection
   DESTINATION lib/${PROJECT_NAME})
+  
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
