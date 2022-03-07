@@ -47,14 +47,17 @@ namespace WhiteLineDetection
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
 		// Frontend
-		auto thresh_str = this->declare_parameter("thresholder", "basic"); //TODO document this
-        int subConst = this->declare_parameter("adaptive_constant", 2);
-        int blockSize = this->declare_parameter("adaptive_blocksize", 11);
+		auto thresh_str = this->declare_parameter("thresholder", "isc.dyn_gauss"); //TODO document this
+
+		// Params for particular frontend versions are namespaced.
+        int subConst = this->declare_parameter("adaptive.constant", 2);
+        int blockSize = this->declare_parameter("adaptive.blocksize", 11);
 
 		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
 		else if (thresh_str == "otsu") thresholder = std::make_shared<OtsuThresholder>();
 		else if (thresh_str == "mean") thresholder = std::make_shared<AdaptiveThresholder>(subConst, blockSize, cv::ADAPTIVE_THRESH_MEAN_C);
 		else if (thresh_str == "gaussian") thresholder = std::make_shared<AdaptiveThresholder>(subConst, blockSize, cv::ADAPTIVE_THRESH_GAUSSIAN_C);
+		else if (thresh_str == "isc.dyn_gauss") thresholder = std::make_shared<DynamicGaussThresholder>();
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
@@ -117,7 +120,7 @@ namespace WhiteLineDetection
 		{
 			auto trans = tf_buffer->lookupTransform(base_frame, camera_frame, tf2::TimePointZero);
 			tf2::convert(trans.transform.rotation, camera_rotation);
-			ray_point = cv::Vec3f{0, 0, (float)trans.transform.translation.z};
+			ray_point = cv::Vec3f{0, 0, static_cast<float>(trans.transform.translation.z)};
 		}
 		catch (std::exception &e)
 		{
