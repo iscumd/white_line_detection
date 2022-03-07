@@ -6,8 +6,11 @@
 
 #pragma once
 
+#include "white_line_detection/raytrace.hpp"
+#include <cstdint>
 #include <opencv2/core.hpp>
 #include <opencv2/core/mat.hpp>
+#include <opencv2/core/types.hpp>
 #include <opencv2/imgproc.hpp>
 #include <rclcpp/logger.hpp>
 #include <rclcpp/logging.hpp>
@@ -58,21 +61,31 @@ class DynamicGaussThresholder : public Thresholder {
     virtual ~DynamicGaussThresholder() = default;
 
     virtual void threshold(cv::UMat &in, cv::UMat &out) override {
-        cv::Mat mean, dev;
 
-        cv::meanStdDev(in, mean, dev);
-        auto mean_val = mean.data[0]; //Assuming mono8, only one chanel to get the mean of
-        auto dev_val = dev.data[0]; //Assuming mono8
+        //TODO we may want to remove extreme outliers
+        //Recalculate every 5 frames
+        if (cycle > 5) {
+            cv::Scalar mean, dev;
 
-        lowerBoundWhite = static_cast<int>(mean_val + 2 * dev_val); // Set treshold to be the top 3%ish of luminance
+            cv::meanStdDev(in, mean, dev);
+            auto mean_val = mean[0]; //Assuming mono8, only one chanel to get the mean of
+            auto dev_val = dev[0]; //Assuming mono8
 
-        RCLCPP_INFO(rclcpp::get_logger("dynGaussThresholder"), "using mean: %d | stdDev: %d | threshold: %i", mean_val, dev_val, lowerBoundWhite);
+            lowerBoundWhite = static_cast<int>(mean_val + 3*dev_val); // Set treshold to be the top 3%ish of luminance
+
+            RCLCPP_INFO(rclcpp::get_logger("dynGaussThresholder"), "using mean: %f | stdDev: %f | threshold: %i", mean_val, dev_val, lowerBoundWhite);
+
+            cycle = 0;
+        }
 
         cv::threshold(in, out, lowerBoundWhite, 255, cv::THRESH_BINARY);
+
+        cycle++;
     }
 
     private:
-        mutable int lowerBoundWhite; //TODO add a variable so that this is only recalculated so many frames at a time to save cycles
+        int lowerBoundWhite;
+        uint8_t cycle{};
 };
 
 /**
