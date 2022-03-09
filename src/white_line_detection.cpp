@@ -49,14 +49,7 @@ namespace WhiteLineDetection
 		// Frontend
 		auto thresh_str = this->declare_parameter("thresholder", "isc.dyn_gauss"); //TODO document this
 
-		// Params for particular frontend versions are namespaced.
-        int subConst = this->declare_parameter("adaptive.constant", 2);
-        int blockSize = this->declare_parameter("adaptive.blocksize", 11);
-
 		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
-		else if (thresh_str == "otsu") thresholder = std::make_shared<OtsuThresholder>();
-		else if (thresh_str == "mean") thresholder = std::make_shared<AdaptiveThresholder>(subConst, blockSize, cv::ADAPTIVE_THRESH_MEAN_C);
-		else if (thresh_str == "gaussian") thresholder = std::make_shared<AdaptiveThresholder>(subConst, blockSize, cv::ADAPTIVE_THRESH_GAUSSIAN_C);
 		else if (thresh_str == "isc.dyn_gauss") thresholder = std::make_shared<DynamicGaussThresholder>();
 	}
 

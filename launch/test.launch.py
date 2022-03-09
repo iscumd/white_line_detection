@@ -44,7 +44,8 @@ def generate_launch_description():
             ('/camera/camera_info', '/camera/color/camera_info')
         ],
         parameters=[
-            {'use_sim_time': use_sim_time}
+            {'use_sim_time': use_sim_time},
+            {'debug_only': True}
         ])
 
     return LaunchDescription([
