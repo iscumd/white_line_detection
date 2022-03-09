@@ -1,5 +1,6 @@
 /**
  * @file frontend.hpp
+ * @author Andrew Ealovega
  * @brief Contains abstractions for the frontend of WLD. These are the structures that give us the matrix of white pixels to pass to the 
  * backend, which actually publishes the pointclouds.
  */
@@ -62,7 +63,7 @@ class DynamicGaussThresholder : public Thresholder {
 
     virtual void threshold(cv::UMat &in, cv::UMat &out) override {
 
-        //TODO we may want to remove extreme outliers
+        //TODO add erosion after threshold
         //Recalculate every 5 frames
         if (cycle > 5) {
             cv::Scalar mean, dev;
@@ -73,7 +74,7 @@ class DynamicGaussThresholder : public Thresholder {
 
             lowerBoundWhite = static_cast<int>(mean_val + 3*dev_val); // Set treshold to be the top 3%ish of luminance
 
-            RCLCPP_INFO(rclcpp::get_logger("dynGaussThresholder"), "using mean: %f | stdDev: %f | threshold: %i", mean_val, dev_val, lowerBoundWhite);
+            //RCLCPP_INFO(rclcpp::get_logger("dynGaussThresholder"), "using mean: %f | stdDev: %f | threshold: %i", mean_val, dev_val, lowerBoundWhite);
 
             cycle = 0;
         }

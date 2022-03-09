@@ -1,3 +1,9 @@
+/**
+ * @file raytrace.hpp
+ * @author Andrew Ealovega
+ * @brief Contains raytracing operations. Currently defines generic vectors, which should be replaced with drop vec3 when we can use C++20.
+ */
+
 #pragma once
 
 #include "pcl/point_types.h"
