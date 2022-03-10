@@ -4,7 +4,7 @@
   <name>white_line_detection</name>
   <version>1.0.0</version>
   <description>Node that translates white lines in an image message to pointclouds.</description>
-  <maintainer email="jkrasan@umich.edu">jordan Kranson</maintainer>
+  <maintainer email="jkrasan@umich.edu">jordan Krasan</maintainer>
   <maintainer email="avealov@umich.edu">Andrew Ealovega</maintainer>
   <license>MIT</license>
 
