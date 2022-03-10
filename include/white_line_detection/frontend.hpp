@@ -39,7 +39,7 @@ class Thresholder {
  * 
  * Needs a lower bound value for construction.
  */
-class BasicThresholder : public Thresholder {
+class BasicThresholder final : public Thresholder {
     public:
     explicit BasicThresholder(int lowerBoundWhite) : lowerBoundWhite(lowerBoundWhite) {};
     virtual ~BasicThresholder() = default;
@@ -57,7 +57,7 @@ class BasicThresholder : public Thresholder {
  * @brief First calculates the mean luminance of the image, then defines the tolerance to be some std dev away from that mean.
  * Then performs a global threshold using that value. This strategy will fail if there are shadows in the image.
  */
-class DynamicGaussThresholder : public Thresholder {
+class DynamicGaussThresholder final : public Thresholder {
     public:
     DynamicGaussThresholder(uint8_t kernelSize) {
         erosionKernal = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
