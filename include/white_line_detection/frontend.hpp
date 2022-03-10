@@ -59,8 +59,8 @@ class BasicThresholder : public Thresholder {
  */
 class DynamicGaussThresholder : public Thresholder {
     public:
-    DynamicGaussThresholder() {
-        erosionKernal = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+    DynamicGaussThresholder(uint8_t kernelSize) {
+        erosionKernal = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
     }
 
     virtual ~DynamicGaussThresholder() = default;

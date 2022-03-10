@@ -6,8 +6,8 @@ node_name = 'white_line_detection'
 #Relitive to this file
 source_file = ['./src/white_line_detection.cpp']
 summary = '''
-Generic white line detection node. Converts any white lines detected in an image message to pointclouds relitive to the camera.
-This node should function with any rectiliniar monocular camera, which has a frame relitive to base set in tf somehow.
+Generic white line detection node. Converts any white lines detected in an image message to pointclouds relative to the camera.
+This node should function with any rectilinear monocular camera, which has a frame relative to base set in tf somehow.
 '''
 
 potential_improvements = 'Add shadow removal to dyn_gauss. Look into using ML as an alternitive thresholder.'
@@ -19,7 +19,7 @@ description = 'The points from the white line detection. These will be in the ba
 
 [[nodes.publishes]]
 name = '/camera/test_img'
-description = 'Image topic publishing the final transformed image before being passed to line detection. Used for debugging in liew of imshow.'
+description = 'Image topic publishing the final transformed image before being passed to line detection. Used for debugging in lieu of imshow.'
 
 [[nodes.subscribes]]
 name = '/camera/image_raw'
@@ -32,14 +32,14 @@ description = 'The standard camera info topic, used to find things like resoluti
 [[nodes.params]]
 name = 'thresholder'
 description = '''
-The thresholding stratagy to use. This is the algorithm that will actually detect the white lines. Default: isc.dyn_gauss
+The thresholding strategy to use. This is the algorithm that will actually detect the white lines. Default: isc.dyn_gauss
 
     **Options**:
 
     1. 'basic': A simple global threshold. Uses `lower_bound_white` as its threshold value.
 
-    2. 'isc.dyn_gauss': An ISC made algorithm that finds the mean of the image, then sets the threshold value to be 3 standard devations away. 
-works well for enviorments that do not have major shadows, including rain with puddles and reflections.
+    2. 'isc.dyn_gauss': An ISC made algorithm that finds the mean of the image, then sets the threshold value to be 3 standard deviations away. 
+works well for environments that do not have major shadows, including rain with puddles and reflections.
 '''
 
 [[nodes.params]]
@@ -51,12 +51,16 @@ name = 'sample_nth_pixel'
 description = 'How many pixels to sample from the white lines to be used in the pointcloud.'
 
 [[nodes.params]]
+name = 'kernel_size'
+description = 'The size of the erosion kernel used, when appropriate.'
+
+[[nodes.params]]
 name = 'camera_frame'
 description = 'The frame the camera is in. Default: "camera_link"'
 
 [[nodes.params]]
 name = 'base_frame'
-description = 'The base frame the camera_frame will be relitive to. Default: "base_footprint"'
+description = 'The base frame the camera_frame will be relative to. Default: "base_footprint"'
 
 [[nodes.params]]
 name = 'debug_only'

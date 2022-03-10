@@ -3,6 +3,7 @@
 #include "white_line_detection/frontend.hpp"
 
 #include <cassert>
+#include <cstdint>
 #include <memory>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/imgproc.hpp>
@@ -37,6 +38,8 @@ namespace WhiteLineDetection
 
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
 
+		uint8_t kernelSize = this->declare_parameter("kernel_size", 3);
+
 		debugOnly = this->declare_parameter("debug_only", false);
 
 		// Tf stuff
@@ -50,7 +53,7 @@ namespace WhiteLineDetection
 		auto thresh_str = this->declare_parameter("thresholder", "isc.dyn_gauss");
 
 		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
-		else if (thresh_str == "isc.dyn_gauss") thresholder = std::make_shared<DynamicGaussThresholder>();
+		else if (thresh_str == "isc.dyn_gauss") thresholder = std::make_shared<DynamicGaussThresholder>(kernelSize);
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
