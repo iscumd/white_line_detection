@@ -47,7 +47,7 @@ namespace WhiteLineDetection
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
 		// Frontend
-		auto thresh_str = this->declare_parameter("thresholder", "isc.dyn_gauss"); //TODO document this
+		auto thresh_str = this->declare_parameter("thresholder", "isc.dyn_gauss");
 
 		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
 		else if (thresh_str == "isc.dyn_gauss") thresholder = std::make_shared<DynamicGaussThresholder>();
