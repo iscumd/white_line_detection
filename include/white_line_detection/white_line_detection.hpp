@@ -14,6 +14,7 @@
 
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
+#include "white_line_detection/frontend.hpp"
 
 namespace WhiteLineDetection
 {
@@ -24,22 +25,14 @@ namespace WhiteLineDetection
         void setupOCL();
 
     private:
+        /// The abstract thresholder used in the frontend.
+        std::shared_ptr<Thresholder> thresholder;
+
         /// True when connected to the camera.
         bool connected{false};
 
         /// Camera resolution as retrived from the camera_info topic.
         int HEIGHT{}, WIDTH{};
-
-        /// The lower and upper bound for what we define 'white' as.
-        int upperColor{255};
-        int lowColor;
-        int highB, highG, highR;
-        int lowB, lowG, lowR;
-
-        /// Kernal used for white pixel filtering.
-        cv::Mat erosionKernel;
-        /// The size of the erosion kernel.
-        int kernelSize;
 
         /// Model used for raycasting from the camera to ground.
         image_geometry::PinholeCameraModel cameraModel;
@@ -55,13 +48,15 @@ namespace WhiteLineDetection
         /// The nth pixel to sample from the white pixels. Prevents spam to PCL2.
         int nthPixel;
 
+        /// Only displays the test image without points if set.
+        bool debugOnly;
+
         // Define raw image callback and camera info callback
         void raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg);
         void cam_info_callback(const sensor_msgs::msg::CameraInfo::SharedPtr msg);
 
         // Define other image pipeline functions
         void getPixelPointCloud(cv::UMat &erodedImage) const;
-        cv::UMat imageFiltering(cv::UMat &warpedImage) const;
         static cv::UMat ptgrey2CVMat(const sensor_msgs::msg::Image::SharedPtr &imageMsg) ;
 
         // Define subscriptions

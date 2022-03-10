@@ -18,14 +18,22 @@ This node should function with any rectilinear monocular camera, which has a fra
 - `/camera/camera_info`: The standard camera info topic, used to find things like resolution. Must be from the same camera that outputs the image topic.
 
 ## Params
-- `lower_bound_white`: The lower threshold value for what is considered white.
-- `kernel_size`: The size of the erosion kernel used for threasholding. Larger values remove more white.
+- `thresholder`: The thresholding strategy to use. This is the algorithm that will actually detect the white lines. Default: isc.dyn_gauss
+
+    **Options**:
+
+    1. 'basic': A simple global threshold. Uses `lower_bound_white` as its threshold value.
+
+    2. 'isc.dyn_gauss': An ISC made algorithm that finds the mean of the image, then sets the threshold value to be 3 standard deviations away. 
+works well for environments that do not have major shadows, including rain with puddles and reflections.
+
+- `lower_bound_white`: The lower threshold value for what is considered white. Only used with `basic` thresholder
 - `sample_nth_pixel`: How many pixels to sample from the white lines to be used in the pointcloud.
+- `kernal_size`: The size of the erosion kernel used, when appropriate.
 - `camera_frame`: The frame the camera is in. Default: "camera_link"
 - `base_frame`: The base frame the camera_frame will be relative to. Default: "base_footprint"
+- `debug_only`: Does not output pointclouds if set. Use for testing when you only want to run this node and a rosbag, for example. Default: false
 
 ## Potential Improvements
-Add dynamic thresholding. Use ML to detect the white lines, allowing us to use this in any weather condition. 
+Add shadow removal to dyn_gauss. Look into using ML as an alternitive thresholder. 
 
-# Misc 
- This node is primarily useful in controlled environments where the lighting is relatively static. It currently has issues otherwise. 

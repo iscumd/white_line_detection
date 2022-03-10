@@ -1,7 +1,12 @@
 #include "../include/white_line_detection/white_line_detection.hpp"
 #include "../include/white_line_detection/raytrace.hpp"
+#include "white_line_detection/frontend.hpp"
 
+#include <cassert>
+#include <cstdint>
+#include <memory>
 #include <opencv2/core/mat.hpp>
+#include <opencv2/imgproc.hpp>
 #include <string>
 #include <opencv2/core/ocl.hpp>
 #include <cv_bridge/rgb_colors.h>
@@ -29,17 +34,13 @@ namespace WhiteLineDetection
 			"/camera/test_img", rclcpp::SensorDataQoS());
 
 		// Define Parameters
+		auto lowColor = this->declare_parameter("lower_bound_white", 240);
 
-		lowColor = this->declare_parameter("lower_bound_white", 240);
-		lowB = lowColor;
-		lowG = lowColor;
-		lowR = lowColor;
-		highB = upperColor;
-		highG = upperColor;
-		highR = upperColor;
-
-		kernelSize = this->declare_parameter("kernel_size", 2);
 		nthPixel = this->declare_parameter("sample_nth_pixel", 5);
+
+		uint8_t kernelSize = this->declare_parameter("kernel_size", 3);
+
+		debugOnly = this->declare_parameter("debug_only", false);
 
 		// Tf stuff
 		camera_frame = this->declare_parameter("camera_frame", "camera_link");
@@ -48,8 +49,11 @@ namespace WhiteLineDetection
 		tf_buffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
 		transform_listener = std::make_shared<tf2_ros::TransformListener>(*tf_buffer);
 
-		// Define CV variables
-		erosionKernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
+		// Frontend
+		auto thresh_str = this->declare_parameter("thresholder", "isc.dyn_gauss");
+
+		if (thresh_str == "basic") thresholder = std::make_shared<BasicThresholder>(lowColor);
+		else if (thresh_str == "isc.dyn_gauss") thresholder = std::make_shared<DynamicGaussThresholder>(kernelSize);
 	}
 
 	/// Sets up the GPU to run our code using OpenCl.
@@ -112,7 +116,7 @@ namespace WhiteLineDetection
 		{
 			auto trans = tf_buffer->lookupTransform(base_frame, camera_frame, tf2::TimePointZero);
 			tf2::convert(trans.transform.rotation, camera_rotation);
-			ray_point = cv::Vec3f{0, 0, (float)trans.transform.translation.z};
+			ray_point = cv::Vec3f{0, 0, static_cast<float>(trans.transform.translation.z)};
 		}
 		catch (std::exception &e)
 		{
@@ -127,7 +131,6 @@ namespace WhiteLineDetection
 
 		// Remove all non white pixels
 		cv::findNonZero(erodedImage, pixelCoordinates);
-
 
 		// If no white lines detected, publish empty cloud so the pointcloud concat sync will still work
 		if (pixelCoordinates.size() == 0) {
@@ -178,20 +181,6 @@ namespace WhiteLineDetection
 		return cvImage->image.getUMat(cv::ACCESS_RW);
 	}
 
-	/// Filters non-white pixels out of the warped image.
-	///
-	/// Returns the eroded image matrix. The only pixels left should be white.
-	cv::UMat WhiteLineDetection::imageFiltering(cv::UMat &warpedImage) const
-	{
-		auto binaryImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
-		auto erodedImage = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
-
-		cv::inRange(warpedImage, cv::Scalar(lowB, lowG, lowR), cv::Scalar(highB, highG, highR), binaryImage);
-		cv::erode(binaryImage, erodedImage, erosionKernel);
-
-		return erodedImage;
-	}
-
 	/// Callback passed to the image topic subscription. This produces a pointcloud for every
 	/// image sent on the topic.
 	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -206,7 +195,8 @@ namespace WhiteLineDetection
 			auto cvImg = ptgrey2CVMat(msg);
 
 			// Filter non-white pixels out
-			auto filteredImg = imageFiltering(cvImg);
+			auto filteredImg = cv::UMat(HEIGHT, WIDTH, CV_8UC1);
+			thresholder->threshold(cvImg, filteredImg);
 
 			// Outputs an image as a topic for testing
 			auto hdr = std_msgs::msg::Header{};
@@ -218,7 +208,9 @@ namespace WhiteLineDetection
 			this->img_test_->publish(img);
 
 			// Convert pixels to pointcloud and publish
-			getPixelPointCloud(filteredImg);
+			if (!debugOnly) {
+				getPixelPointCloud(filteredImg);
+			}
 		}
 	}
 
