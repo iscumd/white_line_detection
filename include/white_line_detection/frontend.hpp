@@ -7,12 +7,11 @@
 
 #pragma once
 
-#include "white_line_detection/raytrace.hpp"
 #include <cstdint>
+
 #include <opencv2/core.hpp>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/core/types.hpp>
 #include <opencv2/imgproc.hpp>
+
 #include <rclcpp/logger.hpp>
 #include <rclcpp/logging.hpp>
 
@@ -20,7 +19,7 @@
 /**
  * @brief Interface for thresholders. 
  */
-class Thresholder {
+class IThresholder {
     public:
     
     /**
@@ -30,7 +29,7 @@ class Thresholder {
      * @param out The output image matrix to be written to.
      */
     virtual void threshold(cv::UMat &in, cv::UMat &out) = 0;
-    virtual ~Thresholder() = default;
+    virtual ~IThresholder() = default;
 };
 
 
@@ -39,7 +38,7 @@ class Thresholder {
  * 
  * Needs a lower bound value for construction.
  */
-class BasicThresholder final : public Thresholder {
+class BasicThresholder final : public IThresholder {
     public:
     explicit BasicThresholder(int lowerBoundWhite) : lowerBoundWhite(lowerBoundWhite) {};
     virtual ~BasicThresholder() = default;
@@ -57,7 +56,7 @@ class BasicThresholder final : public Thresholder {
  * @brief First calculates the mean luminance of the image, then defines the tolerance to be some std dev away from that mean.
  * Then performs a global threshold using that value. This strategy will fail if there are shadows in the image.
  */
-class DynamicGaussThresholder final : public Thresholder {
+class DynamicGaussThresholder final : public IThresholder {
     public:
     DynamicGaussThresholder(uint8_t kernelSize) {
         erosionKernal = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(kernelSize, kernelSize));
