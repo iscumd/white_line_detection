@@ -48,7 +48,7 @@ namespace WhiteLineDetection
 		else if (thresh_str == "isc.dyn_gauss") thresholder = std::make_shared<DynamicGaussThresholder>(kernelSize);
 
 		// Backend
-		auto back_str = this->declare_parameter("backend", "pointcloud2"); //TODO document
+		auto back_str = this->declare_parameter("backend", "pointcloud2");
 
 		if (back_str == "pointcloud2") backend = std::make_unique<PointCloud2Backend>(reinterpret_cast<rclcpp::Node*>(this), nthPixel, base_frame, camera_frame);
 	}
@@ -105,8 +105,7 @@ namespace WhiteLineDetection
 		return cvImage->image.getUMat(cv::ACCESS_RW);
 	}
 
-	/// Callback passed to the image topic subscription. This produces a pointcloud for every
-	/// image sent on the topic.
+	/// Callback passed to the image topic subscription.
 	void WhiteLineDetection::raw_img_callback(const sensor_msgs::msg::Image::SharedPtr msg)
 	{
 		if (!connected)
@@ -131,7 +130,7 @@ namespace WhiteLineDetection
 			out.toImageMsg(img);
 			this->img_test_->publish(img);
 
-			// Convert pixels to pointcloud and publish
+			// Call backend action
 			if (!debugOnly) {
 				backend->processWhiteLines(filteredImg);
 			}

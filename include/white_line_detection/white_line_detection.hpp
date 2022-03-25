@@ -28,7 +28,7 @@ namespace WhiteLineDetection
         /// The abstract processor that handles the binary image and publishing.
         std::unique_ptr<IBackend> backend;
 
-        /// Only displays the test image without points if set.
+        /// Only displays the test image if set.
         bool debugOnly;
 
         /// True when connected to the camera.

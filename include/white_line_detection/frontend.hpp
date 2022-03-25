@@ -2,7 +2,7 @@
  * @file frontend.hpp
  * @author Andrew Ealovega
  * @brief Contains abstractions for the frontend of WLD. These are the structures that give us the matrix of white pixels to pass to the 
- * backend, which actually publishes the pointclouds.
+ * backend, which actually performs an action.
  */
 
 #pragma once
