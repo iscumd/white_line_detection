@@ -6,15 +6,16 @@ node_name = 'white_line_detection'
 #Relitive to this file
 source_file = ['./src/white_line_detection.cpp']
 summary = '''
-Generic white line detection node. Converts any white lines detected in an image message to pointclouds relative to the camera.
-This node should function with any rectilinear monocular camera, which has a frame relative to base set in tf somehow.
+Generic white line detection node. Detects white lines found in an image and performs some action on them. This node has configurable 
+frontends and backends, which allow for configuring the line detection algorithm and action performed on the lines respectively.
+This node should function with any rectilinear monocular camera, which has a transform to base.
 '''
 
 potential_improvements = 'Add shadow removal to dyn_gauss. Look into using ML as an alternitive thresholder.'
 
 
 [[nodes.publishes]]
-name = '/camera/camera_points'
+name = '(pointcloud2 only) /camera/camera_points'
 description = 'The points from the white line detection. These will be in the base_frame as set by param.'
 
 [[nodes.publishes]]
@@ -43,6 +44,16 @@ works well for environments that do not have major shadows, including rain with 
 '''
 
 [[nodes.params]]
+name = 'backend'
+description = '''
+The backend in use. This is the action performed on the detected lines. Default: pointcloud2
+
+    **Options**:
+
+    1. 'pointcloud2': Publishes lines as pointclouds by raytracing a path from the pixel to ground plane.
+'''
+
+[[nodes.params]]
 name = 'lower_bound_white'
 description = 'The lower threshold value for what is considered white. Only used with `basic` thresholder'
 
@@ -64,4 +75,4 @@ description = 'The base frame the camera_frame will be relative to. Default: "ba
 
 [[nodes.params]]
 name = 'debug_only'
-description = 'Does not output pointclouds if set. Use for testing when you only want to run this node and a rosbag, for example. Default: false'
+description = 'Does not use backends if set. Use for testing when you only want to run this node and a rosbag, for example. Default: false'
