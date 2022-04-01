@@ -67,7 +67,7 @@ class DynamicGaussThresholder final : public IThresholder {
     virtual void threshold(cv::UMat &in, cv::UMat &out) override {
 
         //Recalculate every 5 frames
-        if (cycle > 5) {
+        if (cycle >= 5) {
             cv::Scalar mean, dev;
 
             cv::meanStdDev(in, mean, dev);
@@ -91,6 +91,6 @@ class DynamicGaussThresholder final : public IThresholder {
 
     private:
         int lowerBoundWhite;
-        uint8_t cycle{};
+        uint8_t cycle{6};
         cv::Mat erosionKernal;
 };
