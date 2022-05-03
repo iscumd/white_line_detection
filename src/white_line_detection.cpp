@@ -132,7 +132,7 @@ namespace WhiteLineDetection
 
 			// Call backend action
 			if (!debugOnly) {
-				backend->processWhiteLines(filteredImg);
+				backend->processWhiteLines(filteredImg, msg->header);
 			}
 		}
 	}

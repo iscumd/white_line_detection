@@ -19,6 +19,7 @@
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <std_msgs/msg/detail/header__struct.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Vector3.h>
 #include <tf2/convert.h>
@@ -32,7 +33,7 @@ class IBackend {
     /**
      * @brief Takes a passed matrix of white pixels, and produces some result.
      */
-    virtual void processWhiteLines(cv::UMat binaryImg) = 0;
+    virtual void processWhiteLines(cv::UMat binaryImg, const std_msgs::msg::Header& img_header) = 0;
 
     /**
      * @brief Called by parent node when camera info is received for the first time.
@@ -70,7 +71,7 @@ class PointCloud2Backend final : public IBackend {
 	///
 	/// This function works by intersecting the ground plane with a ray cast from each white pixel location, and converting that point to a PCL.
 	/// This pointcloud is then broadcast, allowing the nav stack to see the white lines as obsticles.
-    virtual void processWhiteLines(cv::UMat erodedImage) {
+    virtual void processWhiteLines(cv::UMat erodedImage, const std_msgs::msg::Header& img_header) {
         pcl::PointCloud<pcl::PointXYZ> pointcl;
 		sensor_msgs::msg::PointCloud2 pcl_msg;
 		std::vector<cv::Point> pixelCoordinates;
@@ -104,7 +105,7 @@ class PointCloud2Backend final : public IBackend {
 			pointcl.push_back(pcl::PointXYZ{});
 			pcl::toROSMsg(pointcl, pcl_msg);
 			pcl_msg.header.frame_id = base_frame;
-			pcl_msg.header.stamp = parent->now();
+			pcl_msg.header.stamp = img_header.stamp;
 			camera_cloud_publisher_->publish(pcl_msg);
 			return;
 		}
@@ -134,7 +135,7 @@ class PointCloud2Backend final : public IBackend {
 
 		pcl::toROSMsg(pointcl, pcl_msg);
 		pcl_msg.header.frame_id = base_frame; // Because we use base_footprint->camera_frame translation as our camera point, all points are relative to base_footprint
-		pcl_msg.header.stamp = parent->now();
+		pcl_msg.header.stamp = img_header.stamp;
 
 		camera_cloud_publisher_->publish(pcl_msg);
     }
